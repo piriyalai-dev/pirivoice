@@ -27,7 +27,7 @@ VERSION=""
 REFS="main"
 REFS_GIVEN=0
 DRY_RUN=0
-REPO_SLUG="singto1597/pirivoice"
+REPO_SLUG="piriyalai-dev/pirivoice"
 DATE="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
 
 die() { echo "❌ $*" >&2; exit 1; }
