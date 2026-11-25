@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 const { getMock, patchMock, postMock, deleteMock } = vi.hoisted(() => ({
   getMock: vi.fn<(url: string, config?: unknown) => Promise<unknown>>(),
   patchMock: vi.fn<(url: string, data?: unknown) => Promise<unknown>>(),
-  postMock: vi.fn<(url: string, data?: unknown) => Promise<unknown>>(),
+  postMock: vi.fn<(url: string, data?: unknown, config?: unknown) => Promise<unknown>>(),
   deleteMock: vi.fn<(url: string) => Promise<unknown>>(),
 }))
 vi.mock('@/services/api', () => ({
@@ -18,6 +18,9 @@ import {
   updateComment,
   deleteComment,
   changeDestination,
+  getIssueImages,
+  uploadIssueImages,
+  deleteIssueImage,
 } from '@/services/issue'
 
 describe('issue services (รายการ/แก้ไขเรื่อง + คอมเมนต์)', () => {
@@ -105,5 +108,58 @@ describe('issue services (รายการ/แก้ไขเรื่อง +
       requested_destination: 'talk',
     })
     expect(result).toEqual(fakeIssue)
+  })
+})
+
+describe('issue image services', () => {
+  beforeEach(() => {
+    getMock.mockReset()
+    postMock.mockReset()
+    deleteMock.mockReset()
+  })
+
+  it('getIssueImages → GET รายการรูปแบบ noCache (signed URL ต้องสด)', async () => {
+    const fake = { items: [], limits: { max_report: 3, max_progress: 3, max_per_request: 3, size_limit_mb: 10 } }
+    getMock.mockResolvedValue(fake)
+
+    const result = await getIssueImages(12)
+
+    expect(getMock).toHaveBeenCalledWith('/api/issues/12/images', { noCache: true })
+    expect(result).toEqual(fake)
+  })
+
+  it('uploadIssueImages → multipart files + kind', async () => {
+    const fake = { items: [], limits: { max_report: 3, max_progress: 3, max_per_request: 3, size_limit_mb: 10 } }
+    postMock.mockResolvedValue(fake)
+    const a = new File([new Uint8Array([1])], 'a.jpg', { type: 'image/jpeg' })
+    const b = new File([new Uint8Array([2])], 'b.webp', { type: 'image/webp' })
+
+    const result = await uploadIssueImages(12, [a, b], 'report')
+
+    expect(postMock).toHaveBeenCalledTimes(1)
+    const [url, body, config] = postMock.mock.calls[0] as unknown as [
+      string,
+      FormData,
+      { headers: Record<string, string> },
+    ]
+    expect(url).toBe('/api/issues/12/images')
+    expect(body).toBeInstanceOf(FormData)
+    expect(body.getAll('files')).toHaveLength(2)
+    expect(body.get('kind')).toBe('report')
+    expect(config.headers['Content-Type']).toBe('multipart/form-data')
+    expect(result).toEqual(fake)
+  })
+
+  it('uploadIssueImages ไม่ส่ง kind เมื่อไม่ระบุ', async () => {
+    postMock.mockResolvedValue({ items: [], limits: {} })
+    await uploadIssueImages(3, [new File([new Uint8Array([1])], 'a.jpg', { type: 'image/jpeg' })])
+    const body = postMock.mock.calls[0]?.[1] as FormData
+    expect(body.get('kind')).toBeNull()
+  })
+
+  it('deleteIssueImage → DELETE ตาม id รูป', async () => {
+    deleteMock.mockResolvedValue(undefined)
+    await deleteIssueImage(12, 'img-uuid')
+    expect(deleteMock).toHaveBeenCalledWith('/api/issues/12/images/img-uuid')
   })
 })

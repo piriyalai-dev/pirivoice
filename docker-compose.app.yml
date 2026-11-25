@@ -12,8 +12,11 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${ENV_NAME}_infra_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://${ENV_NAME}_infra_redis:6379/0
       - IMPORT_STORAGE_DIR=/data/imports
+      # 🖼️ รูปภาพของเรื่อง — shared ระหว่าง backend 3 replica (worker ไม่ต้องใช้)
+      - MEDIA_STORAGE_DIR=/data/media
     volumes:
       - imports_data:/data/imports
+      - media_data:/data/media
     networks:
       - shared_network
       - traefik-public
@@ -116,6 +119,11 @@ volumes:
   # (ตั้งชื่อตาม ENV_NAME → staging/production ใช้คนละ volume กัน)
   imports_data:
     name: ${ENV_NAME}_imports_data
+  # 🖼️ รูปภาพของเรื่อง — backend ทั้ง 3 replica เขียน/อ่าน volume เดียวกัน
+  # ⚠️ key ต้องเป็นค่าคงที่ ห้ามใส่ ${ENV_NAME} ใน key (Swarm ไม่ interpolate top-level key)
+  # ⚠️ local driver ผูกกับ node เดียว — multi-node ต้องเปลี่ยน storage backend
+  media_data:
+    name: ${ENV_NAME}_media_data
 
 networks:
   traefik-public:

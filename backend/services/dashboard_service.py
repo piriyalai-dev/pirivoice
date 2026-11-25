@@ -42,6 +42,10 @@ ACTION_LABELS = {
     "CREATE_COMMENT": "คอมเมนต์",
     "UPDATE_COMMENT": "แก้คอมเมนต์",
     "DELETE_COMMENT": "ลบคอมเมนต์",
+    # 🖼️ รูปภาพของเรื่อง (issue_images) — ต้องมีป้ายที่นี่ **และ** ที่
+    # frontend/src/views/audit/AuditLogs.vue (ACTION_LABELS) ตามกฎ "2 ที่"
+    "CREATE_ISSUE_IMAGE": "แนบรูปในเรื่อง",
+    "DELETE_ISSUE_IMAGE": "ลบรูปในเรื่อง",
     "CREATE_USER": "สร้างผู้ใช้",
     "CHANGE_PASSWORD": "เปลี่ยนรหัสผ่าน",
     "UPDATE_STUDENT": "แก้ไขนักเรียน",

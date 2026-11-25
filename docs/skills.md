@@ -3385,3 +3385,51 @@
   - เทสต์ที่จำเป็น: (1) แถว `created_at` เท่ากัน 5 แถว + `limit=2` ต้องได้ครบ 3 หน้า
     ไม่ซ้ำไม่หลุด (2) แทรกแถวใหม่ระหว่างอ่านหน้าถัดไปต้องไม่เห็นซ้ำ (3) cursor เสีย → 400
 - **Date Added:** 2026-11-04
+
+### 🖼️ Signed URL ของรูปผูกกับ "ผู้ดู" — URL ที่ได้จาก response ของคนหนึ่งใช้แทนอีกคนไม่ได้
+
+- **Context/Problem:** `GET /api/issues/{id}/images` และ response ของอัปโหลดคืน
+  `url`/`thumb_url` ที่ฝัง `viewer=<user_id>` ไว้ในลายเซ็น · ตอนเขียนเทสต์จึงหยิบ
+  `items[0].url` จาก response ของ **ผู้แจ้ง** ไปเปิดเพื่อจำลอง "ผู้รับเปิดดู"
+  ⇒ HTTP 200 (ผู้แจ้งมีสิทธิ์) แต่ **ไม่มีแถวใน `issue_image_views`** และ badge
+  "ผู้รับผิดชอบเปิดดูแล้ว" ไม่ขึ้น — ดูเหมือนบั๊ก receipt ทั้งที่ระบบถูก
+- **Root Cause / กับดักที่เจอจริง:**
+  - `resolve_image_for_serving` บันทึก view **ตาม `viewer` ในลายเซ็น** ไม่ใช่คนที่ถือ URL
+    ⇒ URL ของผู้แจ้งทำให้ระบบเห็นว่า "ผู้แจ้งเปิด" ซึ่งถูกข้ามการบันทึกโดยเจตนา
+    (ไม่นับ view ของผู้แจ้ง/ผู้อัปโหลด) ⇒ เงียบสนิท ไม่มี error ให้เห็น
+  - ฝั่ง UI ก็เหมือนกัน: ถ้าเก็บ URL จากตอนอัปโหลดไว้แสดงผล ผู้ใช้คนต่อมาจะเห็น 403
+    ⇒ ต้องเรียก list ด้วย token ของ **ผู้ดูคนนั้น** แล้วใช้ URL จาก response ของเขา
+  - `INSERT INTO rooms (room_code, room_name, level) VALUES ($1,$1,…)` ระเบิด
+    `AmbiguousParameterError: character varying versus text` เพราะ `$1` ถูกใช้กับ
+    คอลัมน์สองชนิด — asyncpg ไม่เดาชนิดให้ (ต้องส่ง `$1,$2` หรือ cast)
+- **Correct Pattern/Solution:**
+  - ทุกครั้งที่จะแสดง/ทดสอบว่า "ใครเปิดรูป" ให้ดึง URL จาก list ของผู้ใช้คนนั้น
+    (`getIssueImages` ใช้ `noCache` เพราะ URL หมดอายุ 10–15 นาที)
+  - เทสต์ receipt: `head_url = list_images(client, head, issue).items[0].url`
+    → `client.get(head_url)` (ไม่ต้องมี Authorization) → ตรวจ `issue_image_views`
+  - อย่าเก็บ signed URL ข้ามหน้า/ข้ามผู้ใช้ — ขอใหม่เมื่อ mount หรือเมื่อ `<img>` error
+- **Date Added:** 2026-11-25
+
+### 💾 สคริปต์ backup ที่รันบน Swarm — `docker ps -f name=^x_infra_db\.` ไม่ match container เดี่ยว และ dump ต้องตรวจด้วย `pg_restore --list`
+
+- **Context/Problem:** เขียน `ops/backup/backup.sh` แล้วทดสอบกับ container เดี่ยว
+  (ชื่อ `smoke_infra_db`) ปรากฏว่า `name=^${ENV_NAME}_infra_db\\.` หาไม่เจอ
+  ทั้งที่บน Swarm ชื่อจะมาในรูป `production_infra_db.1.<task>` ⇒ filter ที่ anchor
+  ด้วยจุดท้ายใช้ได้เฉพาะ Swarm และพังเงียบเมื่อรันทดสอบ/ย้ายไป compose ปกติ
+- **Root Cause / กับดักที่เจอจริง:**
+  - Docker `-f name=` เป็น **regex** ไม่ใช่ substring แบบตรงตัว — ต้องเขียนให้รับทั้ง
+    `name` ลงท้าย (container เดี่ยว) และ `name.<slot>.<task>` (Swarm)
+    → ใช้ `name=^${ENV_NAME}_infra_db([.]|$)`
+  - `pg_restore --list -` **ไม่ใช่ stdin** (`-` ถูกอ่านเป็นชื่อไฟล์) — ถ้าจะอ่านจาก pipe
+    ให้ไม่ต้องส่ง argument: `docker exec -i <db> pg_restore --list < dump`
+  - ไฟล์ `.tgz` ที่เขียนผ่าน pipe (`docker run … | tar …`) อาจ "สร้างสำเร็จ" แต่ขาดกลาง
+    — ต้อง `tar -tzf` เปิดอ่านหนึ่งรอบก่อนถือว่าสำเร็จจริง
+  - backup ต้อง **pg_dump ก่อน tar media** เพราะแถว DB ถูก INSERT หลังไฟล์อยู่ครบ
+    (atomic rename) ⇒ dump ก่อนจึงไม่มีทางอ้างรูปที่ tar ยังไม่เห็น
+- **Correct Pattern/Solution:**
+  - หา container: `docker ps -q -f "name=^${ENV_NAME}_infra_db([.]|$)" | head -n1`
+  - dump: เขียน `.part` → `pg_restore --list` ตรวจ → `mv` เป็นชื่อจริง (ไม่มีไฟล์ครึ่งทาง)
+  - offsite ไม่มี config = `WARN` + exit 0 · local ล้ม = exit 1 · offsite ล้ม = exit 3
+    (คนละรหัสเพื่อให้ cron แยกได้ว่าอะไรพัง)
+  - ซ้อมกู้ต้องรันบน scratch DB/โฟลเดอร์เท่านั้น และตรวจ sha256 ต่อแถวก่อน宣告สำเร็จ
+- **Date Added:** 2026-11-25

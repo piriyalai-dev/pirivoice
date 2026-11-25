@@ -2,7 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import { createIssue } from '@/services/issue'
+import { createIssue, uploadIssueImages } from '@/services/issue'
+import { compressImages } from '@/utils/imageCompress'
+import IssueImageUploader from '@/components/issue/IssueImageUploader.vue'
 import {
   MAIN_CATEGORIES,
   MAIN_CATEGORY_LABELS,
@@ -12,6 +14,7 @@ import {
   type Issue,
   type IssueLevel,
   type MainCategory,
+  DEFAULT_ISSUE_IMAGE_LIMITS,
   type RequestedDestination,
 } from '@/types/issue'
 import { useAuthStore } from '@/stores/auth'
@@ -36,12 +39,13 @@ import AppChip from '@/components/ui/AppChip.vue'
  * 🔴 **เป็นหน้าเต็ม ห้ามเป็น modal** (skills #16) — และมีตาข่ายกันข้อมูลหายครบ 3 ชั้น
  *    (guard ของ router · `beforeunload` · ร่างอัตโนมัติใน `sessionStorage`) ตาม skills #17
  *
- * ⚠️ **ส่วนเบี่ยงเบนจากแผนที่ตั้งใจ:** แผนระบุขั้น 2 ว่ามี "รูป/หลักฐาน" ด้วย
- *    แต่ **ระบบนี้ไม่มี endpoint อัปโหลดรูปของเรื่องเลย** (`services/` มีแต่
- *    `uploadStudentExcel`) · `Issue.image_url` มีอยู่จริงแต่ **อ่านได้อย่างเดียว**
- *    ไม่มีทางตั้งค่าจากฝั่งผู้ใช้ ⇒ **ไม่ทำ** ด้วยเหตุผลเดียวกับที่แผนตัด "ส่งออก Excel" ทิ้ง
- *    (ต้องทำ backend ใหม่ = คนละใบงาน) · การใส่ช่องอัปโหลดที่ส่งไม่ได้จริง
- *    แย่กว่าไม่มี เพราะผู้ใช้จะแนบรูปแล้วเชื่อว่าส่งไปแล้ว
+ * 🖼️ **รูปหลักฐาน (เพิ่มภายหลัง):** ตอนนี้ backend มี endpoint รูปของเรื่องแล้ว
+ *    ⇒ ขั้น 2 มีช่องแนบรูปจริง · ใช้ **ท่า 3.1 "สร้างเรื่องก่อนแล้วค่อยอัป"**
+ *    (`createIssue` → `uploadIssueImages`) เพราะ endpoint อัปโหลดต้องมี `issue_id`
+ *    ⇒ ไฟล์ถูกเก็บเป็น `File` ในหน่วยความจำก่อน (ไม่อยู่ใน draft — `sessionStorage`
+ *      เก็บไฟล์ไม่ได้) แล้วย่อ/อัปโหลดทันทีที่สร้างเรื่องสำเร็จ
+ *    · ถ้าอัปไม่สำเร็จ **เรื่องยังถูกสร้างแล้ว** ⇒ ต้องบอกให้ชัดและพาไปหน้าที่แนบซ้ำได้
+ *      (ห้ามทำให้ผู้ใช้เข้าใจว่าเรื่องหายไป)
  */
 
 const router = useRouter()
@@ -114,6 +118,13 @@ const isLoading = ref(false)
 
 /** สร้างสำเร็จแล้ว — เก็บใบที่ได้มาเพื่อแสดง "หน้าเต็ม" พร้อมเลขเรื่อง */
 const created = ref<Issue | null>(null)
+
+/**
+ * ไฟล์รูปที่เลือกไว้ **ก่อน** มีเรื่อง — ยังไม่ถูกส่ง
+ * ⚠️ เก็บในหน่วยความจำเท่านั้น: draft ใน sessionStorage เก็บ `File` ไม่ได้
+ *    (รีเฟรช/ปิดแท็บ = ไฟล์หาย แต่เรื่องยังไม่ถูกสร้าง = ไม่มีอะไรค้างบนเซิร์ฟเวอร์)
+ */
+const imageFiles = ref<File[]>([])
 /**
  * 🔴 ตั้ง **ก่อน** `router.push`/`clearDraft` เสมอ — ใช้ปลด guard ทุกชั้น
  *    ถ้าลืม: guard จะยิงใส่การนำทางของตัวมันเอง ⇒ ผู้ใช้เห็นกล่อง "ยังไม่บันทึก ทิ้งไหม"
@@ -341,8 +352,36 @@ async function handleSubmit() {
     savedOk.value = true
     clearDraft()
     created.value = issue
+
+    // 🖼️ ท่า 3.1: เรื่องเกิดแล้ว ⇒ อัปโหลดรูปที่เลือกไว้ (ถ้ามี)
+    //    ⚠️ ความล้มเหลวตรงนี้ **ต้องไม่ทำให้เรื่องหาย** — เรื่องถูกสร้างไปแล้วจริง
+    let attachError: string | null = null
+    if (imageFiles.value.length) {
+      try {
+        const prepared = await compressImages(imageFiles.value)
+        await uploadIssueImages(issue.id, prepared, 'report')
+        imageFiles.value = []
+      } catch (e) {
+        attachError = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด'
+      }
+    }
+
     await nextTick()
     topEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    if (attachError) {
+      const res = await Swal.fire({
+        icon: 'warning',
+        title: 'สร้างเรื่องแล้ว แต่แนบรูปไม่สำเร็จ',
+        // ⚠️ `text` ไม่ใช่ `html` — ข้อความ error มาจาก server ห้ามตีความเป็น HTML
+        text: `เรื่อง #${issue.id} ถูกส่งเรียบร้อยแล้ว — รูปไม่ถูกแนบ (${attachError})`,
+        confirmButtonText: 'ไปหน้าเรื่องเพื่อแนบใหม่',
+        confirmButtonColor: BRAND,
+      })
+      if (res.isConfirmed) {
+        await router.push({ name: 'issue-detail', params: { id: issue.id } })
+      }
+    }
   } catch (e) {
     Swal.fire({
       icon: 'error',
@@ -365,6 +404,7 @@ function startAnother() {
   triedNext.value = false
   touched.value = {}
   form.value = { ...EMPTY_ISSUE_FORM }
+  imageFiles.value = []
   step.value = 1
   void nextTick().then(() => topEl.value?.scrollIntoView({ block: 'start' }))
 }
@@ -736,6 +776,19 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           </p>
         </div>
 
+        <!-- 🖼️ รูปหลักฐาน — ไม่บังคับ · อัปโหลดหลังสร้างเรื่องสำเร็จ (ท่า 3.1) -->
+        <div>
+          <p class="mb-1 text-[13px] font-semibold text-ink-2">
+            แนบรูปหลักฐาน <span class="font-normal text-ink-3">(ไม่บังคับ)</span>
+          </p>
+          <IssueImageUploader
+            v-model:files="imageFiles"
+            kind="report"
+            :max-count="DEFAULT_ISSUE_IMAGE_LIMITS.max_report"
+            :size-limit-mb="DEFAULT_ISSUE_IMAGE_LIMITS.size_limit_mb"
+          />
+        </div>
+
         <!--
           🔴 **ย้าย `is_anonymous` มาจากท้ายฟอร์ม (ข้อ 5 เดิม) มาที่นี่**
           ⭐ เพราะเป็นคำถามที่ผูกกับการ "เล่ารายละเอียด" — ผู้ใช้กำลังตัดสินใจอยู่ว่าจะเล่าแค่ไหน
@@ -816,6 +869,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             <dd class="min-w-0 flex-1 text-sm text-ink-1">
               {{ levelLabel(form.startLevel) }}
             </dd>
+          </div>
+          <div v-if="imageFiles.length" class="flex gap-3 py-2.5">
+            <dt class="w-24 shrink-0 text-[13px] font-medium text-ink-2">รูปหลักฐาน</dt>
+            <dd class="min-w-0 flex-1 text-sm text-ink-1">{{ imageFiles.length }} รูป</dd>
           </div>
         </dl>
 

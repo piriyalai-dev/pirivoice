@@ -69,6 +69,66 @@ export interface IssueComment {
   updated_at: string | null
 }
 
+// ============================================================
+// 🖼️ รูปภาพของเรื่อง (issue images) — เฟส 6
+// ============================================================
+
+/** `report` = หลักฐานตอนแจ้ง (ผู้แจ้ง) · `progress` = ความคืบหน้า (ผู้รับงาน) */
+export type IssueImageKind = 'report' | 'progress'
+
+/** หลักฐานการเปิดดู — backend คืนเฉพาะผู้แจ้ง/แอดมิน (ผู้รับเห็น `null`) */
+export interface IssueImageReceipt {
+  current_assignee_viewed: boolean
+  current_assignee_viewed_at: string | null
+  /** จำนวน "คนอื่น" ที่เปิดดู (เพื่อนร่วมห้อง ฯลฯ) — ไม่นับผู้แจ้ง/ผู้รับปัจจุบัน */
+  other_viewer_count: number
+  last_viewed_at: string | null
+}
+
+export interface IssueImage {
+  id: string
+  issue_id: number
+  kind: IssueImageKind
+  /** ⚠️ path relative (`/api/images/...`) — ต้องผ่าน `absoluteMediaUrl()` ก่อนใส่ `<img>` */
+  url: string
+  thumb_url: string
+  width: number
+  height: number
+  bytes: number
+  uploaded_by: number | null
+  created_at: string
+  receipt: IssueImageReceipt | null
+}
+
+/** เพดานที่ server อนุญาต — UI ห้าม hardcode ซ้ำ */
+export interface IssueImageLimits {
+  max_report: number
+  max_progress: number
+  max_per_request: number
+  size_limit_mb: number
+}
+
+export interface IssueImagesResponse {
+  items: IssueImage[]
+  limits: IssueImageLimits
+}
+
+/**
+ * ค่าเริ่มต้น **ก่อน** มีเรื่อง (หน้า `NewIssue`) — ยังเรียก endpoint `limits` ไม่ได้
+ * เพราะ endpoint ผูกกับ `issue_id`
+ *
+ * ⚠️ ต้องตรงกับ default ใน `backend/core/config.py` · หลังสร้างเรื่องแล้ว
+ *    หน้า `IssueDetail` ใช้ค่าจริงจาก server เสมอ (ค่าชุดนี้ไม่ใช่ค่าที่ใช้ตัดสินใจฝั่ง server)
+ */
+export const DEFAULT_ISSUE_IMAGE_LIMITS: IssueImageLimits = {
+  max_report: 3,
+  max_progress: 3,
+  max_per_request: 3,
+  size_limit_mb: 10,
+}
+
+export type IssueImagesScreenState = 'loading' | 'error' | 'ready'
+
 // PATCH แก้ไขเรื่อง (ผู้แจ้ง) — ส่งเฉพาะฟิลด์ที่ต้องการแก้
 export interface UpdateIssuePayload {
   main_category?: string

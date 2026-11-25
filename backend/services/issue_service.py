@@ -107,7 +107,7 @@ async def _can_manage_issue(conn, user_id: int, issue) -> bool:
     """
     if issue["current_assignee_id"] == user_id:
         return True
-    if await _is_admin(conn, user_id):
+    if await is_admin(conn, user_id):
         return True
     teacher_level = await _teacher_scope(conn, user_id)
     if teacher_level:
@@ -705,8 +705,8 @@ async def update_issue(
             if not issue:
                 raise NotFoundError("ไม่พบเรื่องนี้")
 
-            # 1) สิทธิ์: ผู้แจ้งเท่านั้น (+ admin bypass ตาม _is_admin)
-            if issue["reporter_id"] != user_id and not await _is_admin(conn, user_id):
+            # 1) สิทธิ์: ผู้แจ้งเท่านั้น (+ admin bypass ตาม is_admin)
+            if issue["reporter_id"] != user_id and not await is_admin(conn, user_id):
                 raise ForbiddenError("เฉพาะผู้แจ้งเรื่องเท่านั้นที่แก้ไขเรื่องนี้ได้")
 
             # 2) สถานะปิด → แก้ไม่ได้
@@ -788,9 +788,14 @@ async def update_issue(
             )
 
 
-async def _assert_can_view(conn, pool: asyncpg.Pool, user_id: int, issue_row) -> None:
+async def assert_can_view(conn, pool: asyncpg.Pool, user_id: int, issue_row) -> None:
     """ตรวจว่า user มองเห็นเรื่องนี้ได้ไหม (พีระมิด + อดีตผู้รับ/ผู้เกี่ยวข้อง + ครูระดับชั้น)
-    ใช้ร่วมกันระหว่าง get_issue และคอมเมนต์ เพื่อไม่ให้ visibility rule เบน"""
+    ใช้ร่วมกันระหว่าง get_issue, คอมเมนต์ และรูปภาพ (`image_service`) — visibility rule
+    ต้องมีแหล่งความจริงเดียว ไม่ให้รูปหลุดให้คนที่เห็นเรื่องไม่ได้
+
+    ⚠️ เดิมชื่อ `_assert_can_view` (private) — เปิดเป็น public ตอนเพิ่มรูปภาพ เพราะ
+       `image_service` ต้องเรียก และการลอกเงื่อนไขไปเขียนซ้ำจะทำให้สองที่เบนกันเงียบ ๆ
+    """
     level = await user_level(pool, user_id)
     involved = await _is_involved(conn, user_id, issue_row)
     visible = can_see(level, issue_row["current_level"], issue_row["reporter_id"], user_id, issue_row["is_anonymous"]) or involved
@@ -830,7 +835,7 @@ async def get_issue(pool: asyncpg.Pool, user_id: int, issue_id: int) -> Optional
             raise NotFoundError("ไม่พบเรื่องนี้")
 
         # ตรวจ visibility (พีระมิด + อดีตผู้รับ/ผู้เกี่ยวข้อง)
-        await _assert_can_view(conn, pool, user_id, row)
+        await assert_can_view(conn, pool, user_id, row)
 
         # ดึงรายละเอียดเสริม
         steps = await conn.fetch(
@@ -1778,7 +1783,7 @@ async def _is_involved(conn, user_id: int, issue_row) -> bool:
     return False
 
 
-async def _is_admin(conn, user_id: int) -> bool:
+async def is_admin(conn, user_id: int) -> bool:
     """เช็คว่า user เป็น admin (ในห้องใดก็ได้) หรือ Super Admin"""
     if settings.SUPER_ADMIN_ID and int(user_id) == int(settings.SUPER_ADMIN_ID):
         return True
@@ -1815,7 +1820,7 @@ async def add_comment(pool: asyncpg.Pool, user_id: int, issue_id: int, body: str
             )
             if not issue:
                 raise NotFoundError("ไม่พบเรื่องนี้")
-            await _assert_can_view(conn, pool, user_id, issue)
+            await assert_can_view(conn, pool, user_id, issue)
 
             # snapshot ชื่อจริง/ห้องของผู้เขียน (ใช้ primary row ถ้ามีหลายห้อง)
             c = await conn.fetchrow(
@@ -1915,7 +1920,7 @@ async def update_comment(
             )
             if not issue:
                 raise NotFoundError("ไม่พบเรื่องนี้")
-            await _assert_can_view(conn, pool, user_id, issue)
+            await assert_can_view(conn, pool, user_id, issue)
             comment = await _get_own_comment(conn, user_id, issue_id, comment_id)
 
             await conn.execute(
@@ -1946,7 +1951,7 @@ async def delete_comment(
             )
             if not issue:
                 raise NotFoundError("ไม่พบเรื่องนี้")
-            await _assert_can_view(conn, pool, user_id, issue)
+            await assert_can_view(conn, pool, user_id, issue)
             comment = await _get_own_comment(conn, user_id, issue_id, comment_id)
 
             deleted_id = await conn.fetchval(
@@ -1980,7 +1985,7 @@ async def get_comment(pool: asyncpg.Pool, user_id: int, issue_id: int, comment_i
         )
         if not issue:
             raise NotFoundError("ไม่พบเรื่องนี้")
-        await _assert_can_view(conn, pool, user_id, issue)
+        await assert_can_view(conn, pool, user_id, issue)
         row = await conn.fetchrow(
             """
             SELECT * FROM issue_comments

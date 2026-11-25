@@ -16,6 +16,8 @@ import {
   createComment,
   updateComment,
   deleteComment,
+  getIssueImages,
+  deleteIssueImage,
 } from '@/services/issue'
 import {
   MAIN_CATEGORY_LABELS,
@@ -23,7 +25,10 @@ import {
   STATUS_LABELS,
   LEVEL_LABELS,
   DESTINATION_LABELS,
+  DEFAULT_ISSUE_IMAGE_LIMITS,
   type Issue,
+  type IssueImage,
+  type IssueImageLimits,
   type RequestedDestination,
 } from '@/types/issue'
 import type { ApiError } from '@/services/api'
@@ -41,6 +46,9 @@ import IconButton from '@/components/ui/IconButton.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import ApproveBoardModal from '@/components/boards/ApproveBoardModal.vue'
 import BookmarkButton from '@/components/BookmarkButton.vue'
+import IssueImageGallery from '@/components/issue/IssueImageGallery.vue'
+import IssueImageUploader from '@/components/issue/IssueImageUploader.vue'
+import { canUploadToIssueStatus } from '@/utils/issueImages'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,6 +58,11 @@ const notificationsStore = useNotificationsStore()
 const issue = ref<Issue | null>(null)
 const isLoading = ref(true)
 const loadError = ref('') // โหลดข้อมูลไม่สำเร็จ → inline error + retry
+
+// 🖼️ รูปของเรื่อง — แยกโหลดจาก `Issue` เพราะ signed URL มีอายุสั้น (ต้องสดเสมอ)
+const images = ref<IssueImage[]>([])
+const imageLimits = ref<IssueImageLimits>({ ...DEFAULT_ISSUE_IMAGE_LIMITS })
+const imagesError = ref('')
 
 const daysInput = ref(3)
 const newStepTitle = ref('')
@@ -150,6 +163,7 @@ async function load() {
   loadError.value = ''
   try {
     issue.value = await getIssue(Number(route.params.id))
+    void loadImages()
     // 🔔 เปิดเรื่องแล้ว → mark notification ของเรื่องนี้ว่าอ่านแล้ว (badge ลด)
     if (issue.value)
       void notificationsStore.read({ entity_type: 'issue', entity_id: issue.value.id })
@@ -168,6 +182,24 @@ async function load() {
   }
 }
 onMounted(load)
+
+/**
+ * โหลดรายการรูป — เรียกซ้ำได้เสมอ (หลังอัป/ลบ และเมื่อ signed URL หมดอายุ)
+ *
+ * ⚠️ ล้มเหลวแล้ว **ต้องไม่ทำให้ทั้งหน้าพัง** — เรื่องยังอ่านได้แม้รูปจะโหลดไม่ได้
+ */
+async function loadImages() {
+  const current = issue.value
+  if (!current) return
+  imagesError.value = ''
+  try {
+    const res = await getIssueImages(current.id)
+    images.value = res.items
+    imageLimits.value = res.limits
+  } catch (e) {
+    imagesError.value = errMsg(e) || 'โหลดรูปไม่สำเร็จ'
+  }
+}
 
 const canReceive = computed(() => {
   if (!issue.value || !authStore.user) return false
@@ -227,6 +259,53 @@ const canEditIssue = computed(() => {
   if (!isReporter.value && !authStore.isAdmin) return false
   return !['resolved', 'cancelled', 'rejected'].includes(issue.value.status)
 })
+
+// ── รูปของเรื่อง: ใครแนบ/ลบได้ ───────────────────────────────────────────────
+
+const isAssignee = computed(
+  () => !!issue.value && !!authStore.user && issue.value.current_assignee_id === authStore.user.id,
+)
+
+const reportImageCount = computed(() => images.value.filter((i) => i.kind === 'report').length)
+const progressImageCount = computed(() => images.value.filter((i) => i.kind === 'progress').length)
+
+/** ผู้แจ้งแนบ "หลักฐาน" · ผู้รับปัจจุบันแนบ "ความคืบหน้า" — เรื่องปิดแล้วปิดช่องทั้งคู่ */
+const canAttachReport = computed(
+  () => isReporter.value && !!issue.value && canUploadToIssueStatus(issue.value.status),
+)
+const canAttachProgress = computed(
+  () => isAssignee.value && !!issue.value && canUploadToIssueStatus(issue.value.status),
+)
+
+function canDeleteImage(image: IssueImage): boolean {
+  if (!issue.value || !authStore.user) return false
+  if (authStore.isAdmin) return true
+  return image.uploaded_by === authStore.user.id && canUploadToIssueStatus(issue.value.status)
+}
+
+function onImagesUploaded(uploaded: IssueImage[]): void {
+  if (!uploaded.length) return
+  // ต่อทันทีให้เห็นผล แล้ว refetch เพื่อให้ receipt/URL ชุดใหม่ครบ
+  images.value = [...images.value, ...uploaded]
+  void loadImages()
+}
+
+async function handleDeleteImage(image: IssueImage): Promise<void> {
+  const current = issue.value
+  if (!current) return
+  try {
+    await deleteIssueImage(current.id, image.id)
+    images.value = images.value.filter((i) => i.id !== image.id)
+    void loadImages()
+  } catch (e) {
+    void Swal.fire({
+      icon: 'error',
+      title: 'ลบรูปไม่สำเร็จ',
+      text: errMsg(e) || 'เกิดข้อผิดพลาด กรุณาลองใหม่',
+      confirmButtonColor: BRAND,
+    })
+  }
+}
 
 const newComment = ref('')
 
@@ -754,12 +833,61 @@ function countdownLabel(deadline: string): string {
         {{ issue.title }}
       </h2>
       <p class="mt-3 whitespace-pre-wrap text-body text-ink-1">{{ issue.description }}</p>
+
+      <!-- 🖼️ รูปของเรื่อง — signed URL อายุสั้น ⇒ แกลเลอรีขอรายการใหม่เมื่อ URL ตาย -->
+      <IssueImageGallery
+        v-if="images.length"
+        :images="images"
+        :has-assignee="!!issue.current_assignee_id"
+        :can-delete="canDeleteImage"
+        class="mt-3"
+        @delete="handleDeleteImage"
+        @refresh="loadImages"
+      />
+      <!-- legacy: เรื่องเก่าที่มี `image_url` แต่ยังไม่มีแถวใน issue_images -->
       <img
-        v-if="issue.image_url"
+        v-else-if="issue.image_url"
         :src="issue.image_url"
         alt="ภาพประกอบที่แนบมากับเรื่อง"
         class="mt-3 max-h-80 w-full rounded-control border border-line object-cover"
       />
+
+      <div v-if="imagesError" class="mt-3 flex items-center justify-between gap-3 rounded-control bg-canvas p-3">
+        <p class="text-[13px] text-ink-2">{{ imagesError }}</p>
+        <AppButton variant="text" size="sm" @click="loadImages">ลองใหม่</AppButton>
+      </div>
+
+      <!-- 📷 ผู้แจ้ง: แนบหลักฐานเพิ่ม (จนครบเพดานจาก server) -->
+      <div v-if="canAttachReport" class="mt-3">
+        <p class="mb-1 text-[13px] font-semibold text-ink-2">
+          เพิ่มรูปหลักฐาน
+          <span class="font-normal text-ink-3">({{ reportImageCount }}/{{ imageLimits.max_report }})</span>
+        </p>
+        <IssueImageUploader
+          :issue-id="issue.id"
+          kind="report"
+          :max-count="imageLimits.max_report"
+          :existing-count="reportImageCount"
+          :size-limit-mb="imageLimits.size_limit_mb"
+          @uploaded="onImagesUploaded"
+        />
+      </div>
+
+      <!-- 📷 ผู้รับปัจจุบัน: แนบรูปความคืบหน้า -->
+      <div v-if="canAttachProgress" class="mt-3">
+        <p class="mb-1 text-[13px] font-semibold text-ink-2">
+          แนบรูปความคืบหน้า
+          <span class="font-normal text-ink-3">({{ progressImageCount }}/{{ imageLimits.max_progress }})</span>
+        </p>
+        <IssueImageUploader
+          :issue-id="issue.id"
+          kind="progress"
+          :max-count="imageLimits.max_progress"
+          :existing-count="progressImageCount"
+          :size-limit-mb="imageLimits.size_limit_mb"
+          @uploaded="onImagesUploaded"
+        />
+      </div>
     </AppCard>
 
     <!-- ③ ขั้นตอนการดำเนินงาน -->

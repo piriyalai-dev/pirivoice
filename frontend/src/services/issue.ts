@@ -2,6 +2,8 @@ import api from './api'
 import type {
   Issue,
   IssueComment,
+  IssueImageKind,
+  IssueImagesResponse,
   IssueListResponse,
   IssueStep,
   MyIssueSummary,
@@ -170,4 +172,43 @@ export async function reassignIssue(
     to_user_id: toUserId,
     note: note || undefined,
   })) as { status: string; issue_id: number; to_user_id: number; role: string }
+}
+
+// ============================================================
+// 🖼️ รูปภาพของเรื่อง (issue images)
+// ============================================================
+
+/**
+ * รายการรูปของเรื่อง + เพดานที่ server อนุญาต
+ *
+ * ⚠️ **ห้าม cache** — `url`/`thumb_url` เป็น signed URL ที่หมดอายุ (10–15 นาที)
+ *    ⇒ ถ้าตอบจาก cache จะได้ลิงก์ตายแล้ว `<img>` ขึ้น 403 เงียบ ๆ
+ */
+export async function getIssueImages(issueId: number): Promise<IssueImagesResponse> {
+  return (await api.get(`/api/issues/${issueId}/images`, { noCache: true })) as IssueImagesResponse
+}
+
+/**
+ * อัปโหลดรูป 1–3 ไฟล์ในคำขอเดียว (multipart `files`)
+ *
+ * @param kind — ส่งได้เฉพาะเมื่อผู้ใช้เป็น **ทั้งผู้แจ้งและผู้รับปัจจุบัน** ของเรื่อง;
+ *   กรณีอื่น backend ตัดสินเองจากตัวตน (ผู้แจ้ง ⇒ report · ผู้รับ ⇒ progress)
+ */
+export async function uploadIssueImages(
+  issueId: number,
+  files: File[],
+  kind?: IssueImageKind,
+): Promise<IssueImagesResponse> {
+  const form = new FormData()
+  for (const f of files) form.append('files', f)
+  if (kind) form.append('kind', kind)
+
+  return (await api.post(`/api/issues/${issueId}/images`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })) as IssueImagesResponse
+}
+
+/** ลบรูป (soft delete) — ผู้อัปโหลดเอง (เรื่องยังไม่ปิด) หรือแอดมิน */
+export async function deleteIssueImage(issueId: number, imageId: string): Promise<void> {
+  await api.delete(`/api/issues/${issueId}/images/${imageId}`)
 }

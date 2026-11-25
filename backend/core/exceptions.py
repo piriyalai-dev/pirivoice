@@ -17,3 +17,11 @@ class ConflictError(Exception):
 class ServiceUnavailableError(Exception):
     """Raised when a dependency (e.g. Redis queue) is temporarily unavailable."""
     pass
+
+class PayloadTooLargeError(Exception):
+    """Raised when an uploaded file exceeds the configured size limit (→ 413)."""
+    pass
+
+class RateLimitError(Exception):
+    """Raised when a user exceeds an allowed rate (e.g. images per hour) (→ 429)."""
+    pass

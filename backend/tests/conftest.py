@@ -23,6 +23,10 @@ from core.init_db import init_db
 # 📁 โฟลเดอร์เก็บไฟล์ Excel สำหรับเทส (แทน /data/imports ของ Docker)
 settings.IMPORT_STORAGE_DIR = tempfile.mkdtemp(prefix="piri_import_test_")
 
+# 🖼️ โฟลเดอร์เก็บรูปของเรื่องสำหรับเทส (แทน /data/media ของ Docker)
+# ⚠️ ต้องตั้ง **ก่อน** import ที่สร้าง storage — service อ่าน settings ตอนสร้าง instance
+settings.MEDIA_STORAGE_DIR = tempfile.mkdtemp(prefix="piri_media_test_")
+
 # 🔑 ไฟล์ credentials ของ seed users — ชี้ไป temp dir (กันเขียนทับไฟล์จริงตอนเทส)
 settings.SEED_CREDENTIALS_FILE = os.path.join(
     tempfile.mkdtemp(prefix="piri_seed_test_"), "seed_credentials.txt"
@@ -41,7 +45,8 @@ _TABLES = (
     "users", "rooms", "students", "issues",
     "issue_steps", "issue_escalations", "issue_countdowns",
     "issue_status_history", "audit_logs", "student_import_jobs",
-    "issue_comments", "piri_boards", "piri_board_comments",
+    "issue_comments", "issue_images", "issue_image_views",
+    "piri_boards", "piri_board_comments",
     "piri_vote_choices", "piri_votes", "piri_board_reactions",
     "piri_board_reports", "piri_board_views", "notifications",
     "notification_preferences", "academic_terms", "announcements",

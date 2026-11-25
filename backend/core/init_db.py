@@ -226,6 +226,47 @@ async def init_db(pool: asyncpg.Pool):
                 );
                 """)
 
+                # --- 7.55 รูปภาพของเรื่อง (migration 031) ---
+                # ⭐ mirror ของ migrations/031_issue_images.py — DB ใหม่ได้ schema ตรงกับ DB เดิม
+                # issue_images: metadata ต่อรูป — ไฟล์จริงอยู่บน volume (storage_path)
+                #   sha256 = ของไฟล์ **หลัง** แปลงเป็น WebP (ใช้ verify ตอน restore)
+                #   kind: report (ผู้แจ้งแนบ) / progress (ผู้รับงานแนบ)
+                # issue_image_views: 1 แถวต่อ (image_id, user_id) — dedupe 10 นาทีทำที่ service
+                await conn.execute("""
+                CREATE TABLE IF NOT EXISTS issue_images (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+                    uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    uploader_role TEXT,
+                    kind VARCHAR(10) NOT NULL,
+                    storage_path TEXT NOT NULL,
+                    thumb_path TEXT,
+                    sha256 VARCHAR(64) NOT NULL,
+                    thumb_sha256 VARCHAR(64),
+                    mime VARCHAR(40) NOT NULL DEFAULT 'image/webp',
+                    bytes BIGINT NOT NULL,
+                    width INTEGER NOT NULL,
+                    height INTEGER NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    deleted_at TIMESTAMPTZ,
+                    CONSTRAINT chk_issue_images_kind CHECK (kind IN ('report', 'progress')),
+                    CONSTRAINT chk_issue_images_bytes CHECK (bytes > 0),
+                    CONSTRAINT chk_issue_images_dims CHECK (width > 0 AND height > 0)
+                );
+                """)
+                await conn.execute("""
+                CREATE TABLE IF NOT EXISTS issue_image_views (
+                    image_id UUID NOT NULL REFERENCES issue_images(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    viewer_role TEXT,
+                    first_viewed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    last_viewed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    view_count INTEGER NOT NULL DEFAULT 1,
+                    PRIMARY KEY (image_id, user_id),
+                    CONSTRAINT chk_issue_image_views_count CHECK (view_count > 0)
+                );
+                """)
+
                 # --- 7.6 ตาราง PIRI Boards (ระบบสาธารณะ: PIRI Talk + PIRI Vote) ---
                 # แยกงานสาธารณะออกจากระบบ issue ส่วนตัว: ต้นเรื่องมาจาก issue ที่ผู้แจ้ง
                 # ขอปลายทาง 'vote'/'talk' แล้วสภาอนุมัติ (approve_to_public — Phase 2)
@@ -819,6 +860,20 @@ async def init_db(pool: asyncpg.Pool):
                 CREATE INDEX IF NOT EXISTS idx_issue_countdowns_issue ON issue_countdowns(issue_id);
                 CREATE INDEX IF NOT EXISTS idx_issue_status_history_issue ON issue_status_history(issue_id);
                 CREATE INDEX IF NOT EXISTS idx_issue_comments_issue ON issue_comments(issue_id);
+                -- 🖼️ รูปภาพของเรื่อง (migration 031) — mirror ของ migrations/031_issue_images.py
+                -- ⚠️ `run_migrations` รัน **ก่อน** บล็อกนี้ ⇒ migration สร้าง index พวกนี้ไปแล้ว
+                --    บรรทัดเหล่านี้จึงเป็น no-op บน DB จริง แต่จำเป็นสำหรับ DB ที่สร้างจาก init_db
+                --    ล้วน ๆ / กันกรณี index ใน migration ถูกแก้ชื่อ
+                CREATE INDEX IF NOT EXISTS idx_issue_images_issue
+                    ON issue_images(issue_id, created_at) WHERE deleted_at IS NULL;
+                CREATE INDEX IF NOT EXISTS idx_issue_images_uploader
+                    ON issue_images(uploaded_by, created_at DESC) WHERE deleted_at IS NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_issue_images_storage_path
+                    ON issue_images(storage_path);
+                CREATE INDEX IF NOT EXISTS idx_issue_image_views_image
+                    ON issue_image_views(image_id, last_viewed_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_issue_image_views_user
+                    ON issue_image_views(user_id, last_viewed_at DESC);
                 -- PIRI Boards (Phase 1: ตารางสาธารณะ) — feed ตาม status/เวลา + ค้นหา board จาก issue ต้นทาง
                 -- 📌 E1 ('suggestion') **ไม่เพิ่ม index** โดยเจตนา: ตัวกรองทุกเส้นทางนำด้วย
                 --    `status = 'active'` เสมอ ⇒ `idx_piri_boards_status_created` ใช้ได้อยู่แล้ว
