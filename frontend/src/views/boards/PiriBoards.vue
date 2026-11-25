@@ -8,6 +8,7 @@ import AppChip from '@/components/ui/AppChip.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import { fmtRelative } from '@/datetime'
+import { absoluteMediaUrl } from '@/utils/media'
 
 /**
  * 📋 PIRI Boards — รายการบอร์ดสาธารณะ (PIRI Vote + PIRI Talk + ข้อเสนอแนะ)
@@ -202,6 +203,20 @@ async function load() {
           :to="{ name: 'board-detail', params: { id: b.id } }"
           class="flex h-full flex-col rounded-card p-4 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none sm:p-5"
         >
+          <!-- 🖼️ รูปปก (เฉพาะรูปใหม่ใน media_images — ลิงก์ภายนอกเก่าใช้เฉพาะหน้ารายละเอียด)
+               ⚠️ ใช้ `<img>` ตรง ๆ ไม่ใช่ `MediaThumb` — การ์ดทั้งใบเป็น `<a>` และ
+                  `MediaThumb` มี `<button>` อยู่ข้างใน (ปุ่มซ้อนลิงก์ = HTML ไม่รองรับ)
+               ⚠️ URL มีลายเซ็นอายุ 15 นาที — การ์ดสร้างใหม่ทุกครั้งที่ `load()` เท่านั้น
+                  ถ้าผู้ใช้ค้างหน้านานจนหมดอายุ รูปจะขึ้น "รูปเสีย" ⇒ ตั้งใจให้เป็นข้อจำกัด
+                  ที่ยอมรับได้ ดีกว่าแคช URL หมดอายุไว้ใน memory store -->
+          <img
+            v-if="b.cover_image"
+            :src="absoluteMediaUrl(b.cover_image.thumb_url)"
+            alt=""
+            class="mb-3 h-32 w-full rounded-control border border-line object-cover"
+            loading="lazy"
+          />
+
           <div class="mb-2 flex items-center justify-between gap-2">
             <span
               class="inline-flex items-center gap-1 rounded-md bg-canvas px-2 py-0.5 text-[11px] font-semibold text-ink-2"

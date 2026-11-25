@@ -24,10 +24,14 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { createSuggestion } from '@/services/board'
+import { uploadMedia } from '@/services/media'
+import { compressImages } from '@/utils/imageCompress'
+import { DEFAULT_MEDIA_LIMITS } from '@/types/media'
 import { useAuthStore } from '@/stores/auth'
 import { BRAND } from '@/constants/brand'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppCard from '@/components/ui/AppCard.vue'
+import ImagePicker from '@/components/media/ImagePicker.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -42,6 +46,11 @@ const EMPTY_FORM: SuggestionForm = { title: '', description: '', isAnonymous: fa
 
 const form = ref<SuggestionForm>({ ...EMPTY_FORM })
 const submitting = ref(false)
+/**
+ * 🖼️ รูปปกที่เลือกไว้ — ยัง **ไม่** อัปโหลด
+ * ต้องมี id ของบอร์ดก่อน (endpoint อัปผูกกับ owner_id) ⇒ อัปหลังสร้างสำเร็จ (ท่าเดียวกับ `NewIssue`)
+ */
+const coverFiles = ref<File[]>([])
 /** ช่องที่ผู้ใช้แตะแล้ว — โชว์ error เฉพาะช่องที่ "เคยแตะ" ไม่ใช่ตอนเปิดหน้ามาเจอแดงเต็มไปหมด */
 const touched = ref<Record<string, boolean>>({})
 
@@ -87,6 +96,33 @@ async function handleSubmit() {
     // 🔴 `savedOk` ต้องมาก่อน push — ดูคอมเมนต์ตอนประกาศตัวแปร
     savedOk.value = true
     clearDraft()
+
+    // 🖼️ ท่า "สร้างก่อน แล้วอัป" — บอร์ดเกิดแล้ว ⇒ อัปปกที่เลือกไว้ (ถ้ามี)
+    //    ⚠️ ความล้มเหลวตรงนี้ **ต้องไม่ทำให้ข้อเสนอหาย** — มันขึ้นบอร์ดไปแล้วจริง
+    //       ทางกู้คือปุ่ม "เพิ่มรูปปก" ในหน้ารายละเอียด (เห็นเฉพาะเจ้าของโพสต์/สภา
+    //       ตาม `cover_editable` ที่ server คำนวณให้) ⇒ ข้อความชี้ไปที่นั่นได้
+    let attachError: string | null = null
+    if (coverFiles.value.length) {
+      try {
+        const prepared = await compressImages(coverFiles.value)
+        await uploadMedia('board', res.id, prepared)
+        coverFiles.value = []
+      } catch (e) {
+        attachError = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด'
+      }
+    }
+
+    if (attachError) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'เผยแพร่ข้อเสนอแล้ว แต่แนบรูปไม่สำเร็จ',
+        // ⚠️ `text` ไม่ใช่ `html` — ข้อความ error มาจาก server ห้ามตีความเป็น HTML
+        text: `ข้อเสนอขึ้นบอร์ดแล้ว — รูปไม่ถูกแนบ (${attachError})`,
+        confirmButtonText: 'ไปที่ข้อเสนอ',
+        confirmButtonColor: BRAND,
+      })
+    }
+
     // 🎯 ปลายทาง *คือ* การยืนยัน — ผู้ใช้เห็นข้อเสนอของตัวเองอยู่บนบอร์ดแล้ว
     //    ⇒ ไม่ต้องมี Swal "เผยแพร่แล้ว!" ที่ต้องรอ 1.5 วิก่อนไปไหนได้
     await router.push({ name: 'board-detail', params: { id: res.id } })
@@ -140,7 +176,11 @@ function readDraft(): StoredDraft | null {
     if (!raw) return null
     const d = JSON.parse(raw) as Partial<StoredDraft> | null
     if (!d || d.v !== DRAFT_VERSION || !isFormValues(d.form)) return null
-    return { v: DRAFT_VERSION, savedAt: typeof d.savedAt === 'number' ? d.savedAt : 0, form: d.form }
+    return {
+      v: DRAFT_VERSION,
+      savedAt: typeof d.savedAt === 'number' ? d.savedAt : 0,
+      form: d.form,
+    }
   } catch {
     return null
   }
@@ -165,7 +205,17 @@ function clearDraft() {
   }
 }
 
-const dirty = computed(() => JSON.stringify(form.value) !== JSON.stringify(EMPTY_FORM))
+/** ข้อความในฟอร์มต่างจากตอนเปิดหน้า (ไม่นับรูป) */
+const dirtyText = computed(() => JSON.stringify(form.value) !== JSON.stringify(EMPTY_FORM))
+
+/**
+ * มีอะไรที่ยังไม่ได้เผยแพร่ — **นับรูปด้วย**
+ *
+ * ⚠️ รูปเก็บใน `sessionStorage` ไม่ได้ (`File` แปลงเป็น JSON ไม่ได้) ⇒ รูปจะหายจริง
+ *    ถ้าออกจากหน้า · ถ้าไม่นับรวมใน `dirty` ผู้ที่เลือกแต่รูป (ยังไม่พิมพ์อะไร) จะออกจาก
+ *    หน้าได้โดยไม่มีคำเตือน = เสียไฟล์ที่เลือกไว้เงียบ ๆ
+ */
+const dirty = computed(() => dirtyText.value || coverFiles.value.length > 0)
 
 /**
  * บันทึกร่างทุกครั้งที่ฟอร์มเปลี่ยน — **เงียบ ไม่มี Swal**
@@ -227,7 +277,8 @@ onBeforeRouteLeave(async (to) => {
   const res = await Swal.fire({
     icon: 'warning',
     title: 'ยังไม่ได้เผยแพร่',
-    text: 'ข้อความที่พิมพ์ไว้จะหายไปหากออกจากหน้านี้',
+    // ⚠️ ต้องพูดถึงรูปด้วย — รูปที่เลือกไว้ยังอยู่ในหน่วยความจำของแท็บนี้เท่านั้น
+    text: 'ข้อความและรูปที่เตรียมไว้จะหายไปหากออกจากหน้านี้',
     showCancelButton: true,
     confirmButtonText: 'ออกจากหน้านี้',
     cancelButtonText: 'อยู่ต่อ',
@@ -327,7 +378,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
 
       <!-- ไม่ระบุตัวตน -->
       <label
-        class="flex cursor-pointer items-start gap-3 rounded-control bg-canvas p-3 select-none"
+        class="mb-5 flex cursor-pointer items-start gap-3 rounded-control bg-canvas p-3 select-none"
       >
         <input
           v-model="form.isAnonymous"
@@ -343,10 +394,24 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
           </span>
         </span>
       </label>
+
+      <!-- 🖼️ รูปปก (ไม่บังคับ) — อัปหลังสร้างสำเร็จ (ท่า "สร้างก่อน แล้วอัป") -->
+      <div>
+        <p class="mb-1 text-[13px] font-semibold text-ink-2">
+          รูปปก <span class="font-normal text-ink-3">(ไม่บังคับ)</span>
+        </p>
+        <ImagePicker
+          v-model:files="coverFiles"
+          :max-count="DEFAULT_MEDIA_LIMITS.max_per_owner"
+          :size-limit-mb="DEFAULT_MEDIA_LIMITS.size_limit_mb"
+          :disabled="submitting"
+          hint="รูปจะถูกมองเห็นโดยผู้ใช้ที่เข้าสู่ระบบทุกคน — ไม่ระบุตัวตนซ่อนแค่ชื่อผู้เสนอ ไม่ได้ซ่อนรูป"
+        />
+      </div>
     </AppCard>
 
     <!-- สถานะร่าง — เงียบ ๆ บรรทัดเดียว -->
-    <p v-if="draftSavedAt && dirty" class="text-center text-xs text-ink-3">
+    <p v-if="draftSavedAt && dirtyText" class="text-center text-xs text-ink-3">
       <i class="bi bi-cloud-check mr-1" aria-hidden="true" />
       บันทึกร่างไว้แล้วในเครื่องนี้ — กลับมาใหม่ยังกู้คืนได้
     </p>

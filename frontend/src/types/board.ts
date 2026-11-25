@@ -1,5 +1,6 @@
 // PIRI Boards (PIRI Vote + PIRI Talk + ข้อเสนอแนะ) — data models
 // ตรงกับ backend models/board_schemas.py
+import type { MediaImage } from './media'
 
 // 'suggestion' (E1) — ผู้ใช้เสนอไอเดียเอง ขึ้นบอร์ดทันทีโดยไม่ผ่านด่านอนุมัติของสภา
 // ⚠️ ค่าทุกตัวต้องอยู่ใน `chk_piri_boards_type` ฝั่ง DB (migration 022) ไม่งั้น INSERT จะล้ม
@@ -29,6 +30,11 @@ export interface BoardComment {
   commenter_name: string | null
   commenter_first_name?: string | null // ชื่อจริง (avatar ใช้ตัวแรกของชื่อ) — fallback commenter_name
   body: string
+  /**
+   * 🖼️ รูปที่แนบมากับคอมเมนต์ (สูงสุด 1) — `null` = ไม่มีรูป
+   * ⚠️ URL มีลายเซ็นอายุ 15 นาที ⇒ อย่าเก็บข้ามหน้า/แคช
+   */
+  image?: MediaImage | null
   is_edited: boolean
   created_at: string
   updated_at: string | null
@@ -41,7 +47,10 @@ export interface BoardSummary {
   board_type: BoardType
   title: string
   description: string
+  /** ลิงก์ภายนอกแบบเก่า (คัดลอกจากเรื่องตอนอนุมัติ) — เก็บไว้เป็น fallback เท่านั้น */
   cover_image_url: string | null
+  /** 🖼️ รูปปกที่อัปเข้า media_images — มีค่าก็ใช้ตัวนี้ก่อน `cover_image_url` */
+  cover_image?: MediaImage | null
   source_issue_id: number | null
   author_id: number | null
   author_name: string | null // null ถ้า board anonymous
@@ -57,6 +66,11 @@ export interface BoardSummary {
 // รายละเอียด board — vote: choices + my_vote; talk: comments (threaded)
 export interface BoardDetail extends BoardSummary {
   allow_comments: boolean
+  /**
+   * 🖼️ ผู้ดูคนนี้เปลี่ยน/ลบรูปปกได้ไหม — **คำตอบจาก server** (เจ้าของโพสต์ หรือสภา/แอดมิน)
+   * ⚠️ ห้ามคำนวณเองจาก `author_id` — บอร์ด anonymous ถูกส่ง `author_id = null` มาอยู่แล้ว
+   */
+  cover_editable: boolean
   my_vote_choice_id: number | null // board ที่ user โหวตแล้ว (ชี้ choice_id) — ใช้ highlight ปุ่ม
   choices: VoteChoice[]
   comments: BoardComment[]
