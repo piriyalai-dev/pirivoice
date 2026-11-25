@@ -22,11 +22,12 @@
  * 🔴 **ห้ามใส่ `<h1>` ในไฟล์นี้** — `<h1>` ของหน้าอยู่ที่ `AppHeader` แล้ว (R0.3)
  *    ⇒ ชื่อผู้ใช้ใช้ `<h2>` ซึ่งเป็น "หัวเรื่องของการ์ด" ใบเดียวกับที่การ์ดอื่นใช้
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { getMyProfile, type MyProfile } from '@/services/profile'
 import { getMyStats } from '@/services/me'
 import type { PersonalStats } from '@/types/me'
 import { avatarCharOf } from '@/utils/avatar'
+import { absoluteMediaUrl } from '@/utils/media'
 import { roleLabel as roleLabelOf } from '@/constants/roles'
 import PersonalStatsCard from '@/components/PersonalStatsCard.vue'
 import AppCard from '@/components/ui/AppCard.vue'
@@ -52,6 +53,16 @@ const hasError = ref(false)
 const avatarChar = computed(() =>
   avatarCharOf(profile.value?.first_name || profile.value?.username),
 )
+
+// 🖼️ รูปโปรไฟล์จริง — signed URL อายุ 15 นาที ⇒ ถ้าโหลดไม่ขึ้นให้ถอยไปใช้ตัวอักษรย่อ
+const avatarUrl = computed(() => {
+  const av = profile.value?.avatar
+  return av ? absoluteMediaUrl(av.thumb_url) : null
+})
+const avatarBroken = ref(false)
+watch(avatarUrl, () => {
+  avatarBroken.value = false
+})
 
 /**
  * ชื่อที่แสดง — ประกอบจาก prefix/first_name/last_name เป็นหลัก
@@ -192,9 +203,16 @@ onMounted(loadStats)
             <!-- avatar: `-mt` อย่างเดียว เพื่อให้ทับแถบพื้น โดยไม่ดึงชื่อขึ้นไปด้วย -->
             <div class="-mt-10 shrink-0 sm:-mt-12">
               <div
-                class="flex h-16 w-16 items-center justify-center rounded-card bg-brand text-2xl font-bold text-white ring-2 ring-surface sm:h-20 sm:w-20 sm:text-3xl"
+                class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-card bg-brand text-2xl font-bold text-white ring-2 ring-surface sm:h-20 sm:w-20 sm:text-3xl"
               >
-                {{ avatarChar }}
+                <img
+                  v-if="avatarUrl && !avatarBroken"
+                  :src="avatarUrl"
+                  :alt="`รูปโปรไฟล์ของ ${fullName}`"
+                  class="h-full w-full object-cover"
+                  @error="avatarBroken = true"
+                />
+                <template v-else>{{ avatarChar }}</template>
               </div>
             </div>
             <!-- ชื่อ + ป้าย: `pt` ชัดเจน ⇒ อยู่ใต้แถบพื้น บนพื้นขาว อ่านง่ายเสมอ -->

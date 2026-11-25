@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Optional, List, Literal
 from pydantic import BaseModel, Field
 
+from models.media_schemas import MediaImageOut
+
 # สถานะของแถวสมาชิก — **ปิดรู "free text"** ที่เดิม `StudentUpdateRequest.status`
 # รับ string อะไรก็ได้ ⇒ พิมพ์ "Activ" แล้วแถวหลุดจากทุก query ที่กรอง status='active'
 # เงียบ ๆ (ไม่มี error ให้ตามหา) · `superseded` = แถวซ้ำที่ถูกแทนที่ด้วยการย้ายห้อง
@@ -161,6 +163,8 @@ class MyProfileOut(BaseModel):
     full_name: Optional[str] = None
     phone_number: Optional[str] = None
     email: Optional[str] = None
+    # 🖼️ รูปโปรไฟล์ (signed URL, ผู้ดู = เจ้าของ) — ไม่มีรูป = None ⇒ UI ใช้ตัวอักษรย่อแทน
+    avatar: Optional[MediaImageOut] = None
 
 
 class UpdateProfileRequest(BaseModel):

@@ -303,6 +303,19 @@ async def get_avatar(
     return _image_to_dict(row, viewer_id) if row else None
 
 
+async def get_avatar_for_viewer(
+    pool: asyncpg.Pool, owner_id: int, viewer_id: int
+) -> Optional[dict]:
+    """`get_avatar` ระดับ pool — สำหรับ endpoint ที่ไม่ได้ถือ conn อยู่แล้ว (`/auth/login`, `/auth/me`)
+
+    ⚠️ ไม่เช็ค policy ที่นี่: `assert_can_view` ของ `user` วิ่งตอน **เสิร์ฟ** ไฟล์
+       (ตัวนี้แค่เซ็น URL ให้ผู้ดูคนที่ระบุ) — เรียกด้วย `viewer_id` ที่ผิดคน = ลายเซ็นที่
+       เปิดไม่ได้ ซึ่งเป็นอาการที่ตั้งใจ
+    """
+    async with pool.acquire() as conn:
+        return await get_avatar(conn, owner_id, viewer_id)
+
+
 async def avatars_map(
     conn: asyncpg.Connection, user_ids: Sequence[int], viewer_id: int
 ) -> dict[int, dict]:

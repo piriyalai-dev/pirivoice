@@ -127,6 +127,40 @@ commit แรก `1557490` 8 ส.ค. 2026 — Initial commit 99 ไฟล์ 15
 
 ---
 
+## [Unreleased] — โปรไฟล์มีรูปของตัวเอง (avatar) — อัปแล้วเห็นในแถบเมนูทันที
+
+**บริบท ณ ตอนนั้น** — ระบบมี avatar มาตลอด แต่เป็น **ตัวอักษรย่อ** ที่คำนวณจากชื่อ
+(มี helper `avatarCharOf` กันบั๊กสระนำหน้า "แ" ลอย ๆ) · คอลัมน์ `users.avatar_url`
+มีแต่ไม่เคยถูกใช้ และตาราง `media_images(owner_type='user', kind='avatar')` พร้อมอยู่แล้ว
+จาก PR core
+
+**สิ่งที่ทำ**
+
+- backend — `UserOut.avatar` (ทั้ง `/auth/login` และ `/auth/me`) กับ `MyProfileOut.avatar`
+  เป็น `MediaImageOut` แบบ signed URL **ผูกกับผู้ดู = เจ้าของเสมอ** (ทุกทางที่ตอบ `UserOut`
+  คือคำขอของตัวผู้ใช้เอง) · เติมรูปใน `media_service.get_avatar_for_viewer()` /
+  `get_avatar()` (คิวรีเดียวใน `get_my_profile`)
+- frontend — `ProfileEdit.vue`: อัปรูป (พร้อมบีบอัด) หรือลบได้ **ทันที** ไม่ต้องรอกด
+  "บันทึก" ของฟอร์มข้อความ · หลังสำเร็จเรียก `authStore.loadMe()` ให้แถบข้างอัปเดต
+  · `Profile.vue`, `AppSidebar.vue`, `More.vue` แสดงรูปจริงและถอยไปใช้ตัวอักษรย่อ
+  เมื่อ `<img>` โหลดไม่ขึ้น (ลายเซ็นอายุ 15 นาที)
+- `useIdentity` — เพิ่ม `avatarUrl` (ใช้ `absoluteMediaUrl`) เป็นแหล่งเดียวของรูปผู้ล็อกอิน
+
+**ตัดสินใจเพราะ** — รูปผูกกับ "บัญชีที่ล็อกอิน" จึงมี id ของเจ้าของอยู่แล้ว ⇒ ใช้ท่า
+"อัปทันที" ไม่ใช่ "สร้างก่อน แล้วอัป" และไม่ต้องรอ submit ฟอร์ม (ถ้าอัปไม่สำเร็จ
+ข้อความที่พิมพ์ในฟอร์มไม่หาย) · ไม่ขยายไปหน้า admin (`UserManagement`) ในรอบนี้
+เพื่อลดขอบเขต
+
+**บทเรียน** — signed URL ที่ฝังใน state ผู้ใช้โดยตรง (auth store ที่ persist ลง
+localStorage) **ต้องมีทางถอยเมื่อหมดอายุ** — `<img@error>` → ตัวอักษรย่อ ไม่ใช่รูปแตก
+และ **อย่าเชื่อว่า mutation ของ module หนึ่งจะล้าง cache ของอีก module** — ตัวล้าง cache
+(`invalidateForMutation`) จัดกลุ่มตาม segment แรกของ path ⇒ อัปรูปที่ `/api/media/...`
+ไม่ล้าง cache ของ `/api/students/me/profile` เอง
+
+**Migration:** ไม่มี — ใช้ตาราง `media_images` จาก `032_media_images`
+
+---
+
 ## [Unreleased] — กิจกรรมมีรูปปก — อัปขึ้นเซิร์ฟเวอร์ได้ ไม่ต้องฝากลิงก์ภายนอก
 
 **บริบท ณ ตอนนั้น** — กิจกรรมมีช่อง "ลิงก์ภาพปก" มาตั้งแต่ D1 แต่เก็บได้แค่ **URL ภายนอก**

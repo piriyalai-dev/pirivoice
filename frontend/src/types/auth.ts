@@ -1,4 +1,5 @@
 // Auth types
+import type { MediaImage } from './media'
 
 export interface UserRoleInfo {
   role: string | null // ตำแหน่ง เช่น class_president, teacher, teacher_council, admin
@@ -21,5 +22,7 @@ export interface AuthUser {
   is_admin: boolean
   permissions: string[]
   must_change_password: boolean // บัญชี seed: บังคับเปลี่ยนรหัสครั้งแรก
+  /** 🖼️ รูปโปรไฟล์ (signed URL ผูกกับตัวเอง, อายุ 15 นาที) — ไม่มี = ใช้ตัวอักษรย่อ */
+  avatar?: MediaImage | null
   roles: UserRoleInfo[]
 }
