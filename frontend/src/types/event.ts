@@ -1,5 +1,10 @@
 // 📅 ประเภทข้อมูลกิจกรรม (Events) — D1
 //
+// 🖼️ `cover_image` (ไฟล์ที่อัปเข้าเซิร์ฟเวอร์) เป็น **Optional** เพราะแถวเก่า/แถวจาก payload
+//    ที่ยังไม่ผ่าน backend รุ่นใหม่ไม่มีฟิลด์นี้ ⇒ UI ต้องอ่านด้วย `?? null` แล้วถอยไปใช้
+//    `cover_image_url` (ลิงก์ภายนอกแบบเดิม) — ทั้งสองไม่มี = ไม่แสดงรูป
+import type { MediaImage } from './media'
+//
 // 🎯 ที่นี่เป็น "แหล่งความจริงเดียว" ของสถานะกิจกรรม — `services/event.ts` และ view ทุกตัว
 //    import จากที่นี่ ห้ามประกาศซ้ำที่อื่น (เพิ่มค่าใหม่แล้วจะลืมที่ใดที่หนึ่ง)
 //
@@ -184,7 +189,10 @@ export interface Event {
   title: string
   description: string | null
   location: string | null
+  /** ลิงก์ภายนอกแบบเดิม — ใช้เป็น **ทางถอย** เมื่อไม่มี `cover_image` เท่านั้น */
   cover_image_url: string | null
+  /** 🖼️ รูปปกที่อัปเข้าเซิร์ฟเวอร์ (signed URL หมดอายุ 15 นาที) — **ใช้ก่อน `cover_image_url`** */
+  cover_image?: MediaImage | null
   event_date: string
   registration_deadline: string | null
   /** `null` = ไม่จำกัดจำนวน (ไม่ใช่ 0 — `capacity` ต้อง > 0 ถ้ามีค่า) */
@@ -227,7 +235,10 @@ export interface PublicEvent {
   title: string
   description: string | null
   location: string | null
+  /** ลิงก์ภายนอกแบบเดิม — ใช้เป็น **ทางถอย** เมื่อไม่มี `cover_image` เท่านั้น */
   cover_image_url: string | null
+  /** 🖼️ รูปปกที่อัปเข้าเซิร์ฟเวอร์ — backend แนบให้ฝั่งนักเรียนด้วย (ดู `EventPublicOut`) */
+  cover_image?: MediaImage | null
   event_date: string
   registration_deadline: string | null
   capacity: number | null

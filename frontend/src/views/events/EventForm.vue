@@ -12,6 +12,10 @@ import '@vuepic/vue-datepicker/dist/main.css'
 import { th } from 'date-fns/locale'
 import { useAuthStore } from '@/stores/auth'
 import { createEvent, getEvent, updateEvent } from '@/services/event'
+// 🖼️ รูปปก — กิจกรรมต้องมี id ก่อนอัป ⇒ ท่า "สร้างก่อน แล้วอัป" (เหมือน NewSuggestion)
+import { deleteMedia, uploadMedia } from '@/services/media'
+import { compressImages } from '@/utils/imageCompress'
+import { DEFAULT_MEDIA_LIMITS, type MediaImage } from '@/types/media'
 import { dateToInput, formatThaiDateTimeInput, inputToDate } from '@/datetime'
 import {
   EMPTY_EVENT_FORM,
@@ -29,6 +33,8 @@ import type { ApiError } from '@/services/api'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import ImagePicker from '@/components/media/ImagePicker.vue'
+import MediaThumb from '@/components/media/MediaThumb.vue'
 
 /**
  * ✍️ สร้าง/แก้ไขกิจกรรม — **หน้าเต็มหน้า ไม่ใช่ modal** (รอบ 4)
@@ -90,7 +96,48 @@ const isDeleted = computed(() => event.value?.deleted_at != null)
  */
 const savedOk = ref(false)
 
-const dirty = computed(() => isDirty(baseline.value, form.value))
+// ── รูปปก (media_images) ─────────────────────────────────────────────────────
+//
+// 🖼️ รูปที่อัปเข้าเซิร์ฟเวอร์เป็นคนละเรื่องกับ `form.cover_image_url` (ลิงก์ภายนอกแบบเดิม):
+//    - **โหมดสร้าง** ยังไม่มี id ⇒ เก็บไฟล์รอไว้ แล้วอัปหลังสร้างสำเร็จจึงได้ id มาผูก
+//      (อัปไม่สำเร็จ = กิจกรรมยังถูกสร้าง + Swal เตือน — ไม่ทำให้ข้อมูลที่พิมพ์หาย)
+//    - **โหมดแก้ไข** มี id แล้ว ⇒ **ลบรูปเดิมทำทันที** (ต้องยืนยัน) ส่วนการเลือกรูปใหม่
+//      อัปตอนกดบันทึก — ฝั่ง server ใช้ partial unique index ⇒ อัปใหม่ = แทนของเดิม
+const coverFiles = ref<File[]>([])
+/** รูปปกที่กิจกรรมนี้มีอยู่แล้ว — แสดง preview + ปุ่มลบ */
+const currentCover = ref<MediaImage | null>(null)
+
+/** "ยังไม่บันทึก" จากช่องข้อความเท่านั้น — ใช้ตัดสินว่าจะเขียน/ล้างร่างใน sessionStorage */
+const textDirty = computed(() => isDirty(baseline.value, form.value))
+/**
+ * ★ นิยาม "ยังไม่บันทึก" ที่ guard ใช้ — **ไฟล์ที่ยังไม่ถูกอัปก็นับ**
+ * ⚠️ ร่างใน sessionStorage เก็บได้แต่ข้อความ (File เก็บไม่ได้) ⇒ ถ้านับรวมแล้วปล่อยให้
+ *    ออกหน้าเงียบ ๆ ผู้ใช้จะเสียรูปที่เลือกไว้โดยไม่รู้ตัว (บทเรียนเดียวกับ `NewSuggestion`)
+ */
+const dirty = computed(() => textDirty.value || coverFiles.value.length > 0)
+
+/** ลบรูปปกของกิจกรรมที่มีอยู่แล้ว — ทำทันที (มี id แล้ว ไม่ต้องรอ "บันทึก") */
+async function removeCurrentCover(): Promise<void> {
+  const img = currentCover.value
+  const id = eventId.value
+  if (!img || id === null) return
+  const res = await Swal.fire({
+    icon: 'warning',
+    title: 'ลบรูปปกนี้?',
+    text: 'รูปจะหายจากหน้ากิจกรรมทันที (แนบใหม่ได้ภายหลัง)',
+    showCancelButton: true,
+    confirmButtonText: 'ลบรูปปก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: BRAND,
+  })
+  if (!res.isConfirmed) return
+  try {
+    await deleteMedia('event', id, img.id)
+    currentCover.value = null
+  } catch (e) {
+    await Swal.fire({ icon: 'error', title: 'ลบรูปไม่สำเร็จ', text: errText(e) })
+  }
+}
 const formError = computed(() => formErrorOf(form.value))
 const categoryOptions = computed(() => categoryOptionsOf(form.value.category))
 
@@ -144,6 +191,8 @@ async function load() {
     event.value = null
     form.value = { ...EMPTY_EVENT_FORM }
     baseline.value = buildCreate(EMPTY_EVENT_FORM)
+    coverFiles.value = []
+    currentCover.value = null
     isLoading.value = false
     await offerDraftRestore()
     return
@@ -160,6 +209,8 @@ async function load() {
     event.value = row
     form.value = toFormValues(row)
     baseline.value = toBaseline(row)
+    coverFiles.value = []
+    currentCover.value = row.cover_image ?? null
   } catch (e) {
     // ⚠️ 404 → "ไม่มีกิจกรรมนี้" (ไม่มีปุ่มลองใหม่) · อย่างอื่น → error ทั่วไป (มีปุ่มลองใหม่)
     //    ⚠️ endpoint นี้ **ไม่คืน 404 สำหรับใบที่ถูกลบ** — นั่นมาถึงเป็น 200 + `deleted_at`
@@ -299,7 +350,10 @@ watch(
   [form, isLoading],
   () => {
     if (isLoading.value || savedOk.value) return
-    if (!dirty.value) {
+    // ⚠️ เทียบ `textDirty` ไม่ใช่ `dirty` — รูปที่เลือกแต่ยังไม่อัปเก็กลง sessionStorage ไม่ได้
+    //    ⇒ ถ้าใช้ `dirty` จะเขียนร่างที่มีแค่รูป แล้วรอบหน้า `isDirty(baseline, draft)` เป็น false
+    //      ⇒ ลบร่างทิ้งเงียบ ๆ ทั้งที่ผู้ใช้ยังไม่ได้อะไรเลย
+    if (!textDirty.value) {
       clearDraft()
       return
     }
@@ -375,11 +429,15 @@ async function save() {
   saving.value = true
   saveError.value = ''
   try {
+    /** id ที่ใช้ผูกไฟล์แนบ — ได้มาจากการสร้าง หรือ id เดิมตอนแก้ไข */
+    let savedId: number | null = eventId.value
+    let attachError: string | null = null
+
     if (isEdit.value) {
       const id = eventId.value
       if (id === null) return
       const patch = buildPatch(baseline.value, buildCreate(form.value))
-      if (Object.keys(patch).length === 0) {
+      if (Object.keys(patch).length === 0 && coverFiles.value.length === 0) {
         // ไม่มีอะไรเปลี่ยน = **ไม่ยิง API เลย** (ผู้ใช้อาจเปิดหน้าแล้วกดบันทึกโดยไม่ได้แก้)
         // ⚠️ ต้องตั้ง `savedOk` ที่นี่ด้วย ไม่ใช่แค่เส้นทางที่ยิง API สำเร็จ
         savedOk.value = true
@@ -387,20 +445,47 @@ async function save() {
         await router.push({ name: 'event-management' })
         return
       }
-      await updateEvent(id, patch)
+      // ⚠️ ไม่ยิง PATCH เปล่าเมื่อมีแต่รูปใหม่ — audit log จะเต็มไปด้วยรายการที่ไม่มีอะไรเปลี่ยน
+      if (Object.keys(patch).length > 0) await updateEvent(id, patch)
     } else {
-      await createEvent(buildCreate(form.value))
+      const created = await createEvent(buildCreate(form.value))
+      savedId = created.id
+    }
+
+    // 🖼️ อัป/แทนรูปปก **หลัง** กิจกรรมมี id แล้ว — ล้มเหลวไม่ทำให้ฟอร์มหาย (แค่แจ้ง)
+    if (coverFiles.value.length > 0 && savedId !== null) {
+      try {
+        const prepared = await compressImages(coverFiles.value)
+        await uploadMedia('event', savedId, prepared)
+        coverFiles.value = []
+        currentCover.value = null
+      } catch (e) {
+        attachError = errText(e)
+      }
     }
 
     savedOk.value = true // 🔴 ก่อน push เสมอ — ดูคอมเมนต์ของ `savedOk`
     clearDraft()
-    await Swal.fire({
-      icon: 'success',
-      title: isEdit.value ? 'บันทึกแล้ว' : 'สร้างกิจกรรมแล้ว',
-      text: isEdit.value ? undefined : 'กิจกรรมถูกสร้างเป็นฉบับร่าง — ยังไม่มีใครเห็นจนกว่าจะกด "เผยแพร่"',
-      timer: isEdit.value ? 1200 : 1800,
-      showConfirmButton: false,
-    })
+    if (attachError) {
+      // ⚠️ `text` ไม่ใช่ `html` — ข้อความ error มาจาก server ห้ามตีความเป็น HTML
+      await Swal.fire({
+        icon: 'warning',
+        title: isEdit.value ? 'บันทึกแล้ว แต่แนบรูปไม่สำเร็จ' : 'สร้างกิจกรรมแล้ว แต่แนบรูปไม่สำเร็จ',
+        text: `ข้อมูลกิจกรรมบันทึกเรียบร้อย — รูปไม่ถูกแนบ (${attachError}) เข้าไปแนบที่หน้าแก้ไขได้`,
+        confirmButtonText: 'ไปที่รายการกิจกรรม',
+        confirmButtonColor: BRAND,
+      })
+    } else {
+      await Swal.fire({
+        icon: 'success',
+        title: isEdit.value ? 'บันทึกแล้ว' : 'สร้างกิจกรรมแล้ว',
+        text: isEdit.value
+          ? undefined
+          : 'กิจกรรมถูกสร้างเป็นฉบับร่าง — ยังไม่มีใครเห็นจนกว่าจะกด "เผยแพร่"',
+        timer: isEdit.value ? 1200 : 1800,
+        showConfirmButton: false,
+      })
+    }
     await router.push({ name: 'event-management' })
   } catch (e) {
     // ฟอร์มยังอยู่ครบ — ผู้ใช้ไม่ต้องพิมพ์ใหม่ทั้งหมด (เหตุผลเดียวกับที่ย้ายมาเป็นหน้าเต็ม)
@@ -613,21 +698,69 @@ const inputCls =
         </div>
 
         <div>
-          <label for="ev-cover" class="block text-xs font-semibold text-stone-700">ลิงก์ภาพปก</label>
-          <input
-            id="ev-cover"
-            v-model="form.cover_image_url"
-            type="url"
-            maxlength="500"
-            placeholder="https://…"
-            :class="inputCls"
-          />
-          <img
-            v-if="form.cover_image_url"
-            :src="form.cover_image_url"
-            alt="ตัวอย่างภาพปก"
-            class="mt-2 max-h-32 w-full rounded-xl border border-stone-200 bg-stone-100 object-cover"
-          />
+          <p class="block text-xs font-semibold text-stone-700">
+            รูปปกกิจกรรม <span class="font-normal text-ink-3">(ไม่บังคับ)</span>
+          </p>
+
+          <!-- รูปที่มีอยู่แล้ว (โหมดแก้ไข) — ลบได้ทันที หรือเลือกใหม่ด้านล่างเพื่อแทนที่ -->
+          <div
+            v-if="currentCover"
+            class="mt-2 flex items-center gap-3 rounded-xl border border-stone-200 p-2"
+          >
+            <MediaThumb
+              :image="currentCover"
+              alt="รูปปกปัจจุบัน"
+              class="w-16 shrink-0"
+              rounded="rounded-lg"
+              aspect="aspect-[16/9]"
+            />
+            <p class="min-w-0 flex-1 text-[12px] leading-snug text-ink-3">
+              รูปปัจจุบัน — เลือกรูปใหม่ด้านล่างเพื่อแทนที่
+            </p>
+            <button
+              type="button"
+              data-testid="cover-remove-btn"
+              class="shrink-0 rounded-lg px-2 py-1 text-[12px] font-semibold text-brand transition hover:bg-brand/5"
+              :disabled="saving || isDeleted"
+              @click="removeCurrentCover"
+            >
+              <i class="bi bi-trash3"></i> ลบรูป
+            </button>
+          </div>
+
+          <div class="mt-2">
+            <ImagePicker
+              v-model:files="coverFiles"
+              :max-count="DEFAULT_MEDIA_LIMITS.max_per_owner"
+              :size-limit-mb="DEFAULT_MEDIA_LIMITS.size_limit_mb"
+              :disabled="saving || isDeleted"
+              hint="หลังเผยแพร่ ผู้ใช้ที่เข้าสู่ระบบทุกคนเห็นรูปนี้ — กิจกรรมที่ยังเป็นฉบับร่างเห็นได้เฉพาะสภา"
+            />
+          </div>
+
+          <!-- ทางถอยแบบเดิม (ลิงก์ภายนอก) — พับเก็บไว้ ไม่ให้แย่งความสนใจการอัปไฟล์ -->
+          <details class="mt-3">
+            <summary class="cursor-pointer text-[12px] font-semibold text-ink-3">
+              หรือใช้ลิงก์ภาพภายนอก (แบบเดิม)
+            </summary>
+            <input
+              id="ev-cover"
+              v-model="form.cover_image_url"
+              type="url"
+              maxlength="500"
+              placeholder="https://…"
+              :class="inputCls"
+            />
+            <p class="mt-1 text-[11px] text-ink-3">
+              ใช้เฉพาะเมื่อไม่ได้อัปรูปด้านบน — รูปที่อัปเข้าเซิร์ฟเวอร์จะถูกแสดงก่อนเสมอ
+            </p>
+            <img
+              v-if="form.cover_image_url"
+              :src="form.cover_image_url"
+              alt="ตัวอย่างภาพปก"
+              class="mt-2 max-h-32 w-full rounded-xl border border-stone-200 bg-stone-100 object-cover"
+            />
+          </details>
         </div>
       </div>
 
