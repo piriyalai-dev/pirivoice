@@ -77,6 +77,32 @@
 | POST | `/api/issues/{id}/comments` | มองเห็นเรื่องนี้ | `CommentCreateRequest` (`body`) | `CommentOut` |
 | PATCH | `/api/issues/{id}/comments/{comment_id}` | ผู้เขียนคอมเมนต์ | `CommentCreateRequest` | `CommentOut` |
 | DELETE | `/api/issues/{id}/comments/{comment_id}` | ผู้เขียนคอมเมนต์ | — | dict |
+| POST | `/api/issues/{id}/images` | ผู้แจ้งหรือผู้รับของเรื่องนี้ | multipart `files` (≤3, ≤10 MB/ไฟล์) | `IssueImageListOut` |
+| GET | `/api/issues/{id}/images` | มองเห็นเรื่องนี้ | — | `IssueImageListOut` |
+| DELETE | `/api/issues/{id}/images/{image_id}` | ผู้อัปหรือสภา | — | dict |
+| GET | `/api/images/{image_id}` | **ไม่มี Bearer** — signed URL เท่านั้น | query: `variant` `viewer` `exp` `sig` | ไฟล์ WebP |
+
+> `url`/`thumb_url` ที่ได้จาก endpoint รูปเป็น **path relative** ที่มีลายเซ็นผูกกับผู้ดูและ
+> หมดอายุ 15 นาที ⇒ ห้ามเก็บข้ามหน้า และ URL ของคนหนึ่งใช้แทนอีกคนไม่ได้ (จะได้ 403)
+
+### รูปภาพกลาง · `/api/media`
+
+ตารางเดียวรองรับรูปของทุกส่วน — `owner_type ∈ {board, board_comment, announcement, event, user}`
+แต่ละชนิดอนุญาต `kind` เดียว (`board`/`event` = `cover` · `board_comment`/`announcement` = `attachment`
+· `user` = `avatar`) และมีได้ 1 รูปต่อเจ้าของ (อัปใหม่ = แทนที่ของเดิม)
+
+| Method | Path | เงื่อนไข | คำขอ | คำตอบ |
+|---|---|---|---|---|
+| POST | `/api/media/{owner_type}/{owner_id}` | ตาม policy ของเจ้าของ (เช่น avatar = ตัวเอง, ประกาศ = `MANAGE_ANNOUNCEMENTS`) | multipart `files` + `kind` (ไม่บังคับ) | `MediaImageListOut` |
+| GET | `/api/media/{owner_type}/{owner_id}` | มองเห็นเจ้าของนั้น | — | `MediaImageListOut` |
+| DELETE | `/api/media/{owner_type}/{owner_id}/{image_id}` | ผู้อัปหรือผู้จัดการเนื้อหานั้น | — | dict |
+| GET | `/api/media/file/{image_id}` | **ไม่มี Bearer** — signed URL (scope `media`) | query: `variant` `viewer` `exp` `sig` | ไฟล์ WebP |
+
+- `owner_type` ที่ไม่ลงทะเบียน ⇒ **400** ทันที (registry แบบ fail-closed)
+- `kind` ที่ไม่ตรงกับเจ้าของ ⇒ 400 · จำนวน/ไฟล์ใหญ่เกิน ⇒ 400/413 · เกิน 20 รูป/ชั่วโมง/คน ⇒ 429
+- เจ้าของถูกลบ/ซ่อน ⇒ **404** (ตรวจสดทุกครั้งที่เสิร์ฟ ไม่ใช่แค่ตอนออก URL)
+- response **ไม่มี `uploaded_by`** เพราะบอร์ด/คอมเมนต์เป็น anonymous
+- signed URL ของ `media` ใช้กับ `/api/images/` ไม่ได้และกลับกัน (scope ต่างกัน)
 
 ### แดชบอร์ด · `/api/dashboard`
 

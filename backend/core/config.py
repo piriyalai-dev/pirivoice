@@ -65,6 +65,15 @@ class Settings(BaseSettings):
     MEDIA_VIEW_DEDUPE_MINUTES: int = 10
     # soft-deleted image เก็บไฟล์บนดิสก์ไว้นานเท่าไรก่อน purge
     MEDIA_PURGE_AFTER_DAYS: int = 30
+    # ------------------------------------------------------------
+    # รูปภาพกลาง (media_images) — เพดานจำนวนรูปต่อเจ้าของ แยกตามชนิดรูป
+    #   cover     = ปกบอร์ด PIRI / ภาพปกกิจกรรม
+    #   attachment = รูปในคอมเมนต์บอร์ด / รูปประกาศ
+    #   avatar    = รูปโปรไฟล์
+    # ⚠️ ค่า = 1 ⇒ "เปลี่ยนรูป" แทนที่ของเดิมอัตโนมัติ (ดู services/media_policies.py)
+    MEDIA_MAX_COVER_IMAGES: int = 1
+    MEDIA_MAX_ATTACHMENT_IMAGES: int = 1
+    MEDIA_MAX_AVATAR_IMAGES: int = 1
 
     # Seed users (admin/ครูสภา/ประธานสภา) ตอนเปิดระบบครั้งแรก — ไฟล์เก็บ username+รหัสชั่วคราว
     SEED_CREDENTIALS_FILE: str = "default_admin_credentials.txt"

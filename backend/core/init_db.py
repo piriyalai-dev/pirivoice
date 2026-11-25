@@ -267,6 +267,38 @@ async def init_db(pool: asyncpg.Pool):
                 );
                 """)
 
+                # --- 7.56 รูปภาพกลาง (migration 032) — mirror ของ migrations/032_media_images.py
+                # owner_type polymorphic (board/board_comment/announcement/event/user) —
+                # ไม่มี FK ไปเจ้าของ ⇒ ความปลอดภัยตอนเจ้าของถูกลบ/ซ่อนมาจาก policy ตอนเสิร์ฟ
+                # kind: cover (บอร์ด/กิจกรรม) · attachment (คอมเมนต์/ประกาศ) · avatar (โปรไฟล์)
+                # ไม่ส่ง uploaded_by ออกจาก API (anonymous deanonymization guard)
+                await conn.execute("""
+                CREATE TABLE IF NOT EXISTS media_images (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    owner_type VARCHAR(24) NOT NULL,
+                    owner_id INTEGER NOT NULL,
+                    kind VARCHAR(16) NOT NULL,
+                    uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    uploader_role TEXT,
+                    storage_path TEXT NOT NULL,
+                    thumb_path TEXT,
+                    sha256 VARCHAR(64) NOT NULL,
+                    thumb_sha256 VARCHAR(64),
+                    mime VARCHAR(40) NOT NULL DEFAULT 'image/webp',
+                    bytes BIGINT NOT NULL,
+                    width INTEGER NOT NULL,
+                    height INTEGER NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    deleted_at TIMESTAMPTZ,
+                    CONSTRAINT chk_media_owner_type CHECK (
+                        owner_type IN ('board','board_comment','announcement','event','user')
+                    ),
+                    CONSTRAINT chk_media_kind CHECK (kind IN ('cover','attachment','avatar')),
+                    CONSTRAINT chk_media_bytes CHECK (bytes > 0),
+                    CONSTRAINT chk_media_dims CHECK (width > 0 AND height > 0)
+                );
+                """)
+
                 # --- 7.6 ตาราง PIRI Boards (ระบบสาธารณะ: PIRI Talk + PIRI Vote) ---
                 # แยกงานสาธารณะออกจากระบบ issue ส่วนตัว: ต้นเรื่องมาจาก issue ที่ผู้แจ้ง
                 # ขอปลายทาง 'vote'/'talk' แล้วสภาอนุมัติ (approve_to_public — Phase 2)
@@ -874,6 +906,16 @@ async def init_db(pool: asyncpg.Pool):
                     ON issue_image_views(image_id, last_viewed_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_issue_image_views_user
                     ON issue_image_views(user_id, last_viewed_at DESC);
+                -- 🖼️ รูปภาพกลาง (migration 032) — mirror ของ migrations/032_media_images.py
+                CREATE INDEX IF NOT EXISTS idx_media_owner
+                    ON media_images(owner_type, owner_id, created_at) WHERE deleted_at IS NULL;
+                CREATE INDEX IF NOT EXISTS idx_media_uploader
+                    ON media_images(uploaded_by, created_at DESC) WHERE deleted_at IS NULL;
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_media_storage_path
+                    ON media_images(storage_path);
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_media_single_cover
+                    ON media_images(owner_type, owner_id)
+                    WHERE deleted_at IS NULL AND kind IN ('cover','avatar');
                 -- PIRI Boards (Phase 1: ตารางสาธารณะ) — feed ตาม status/เวลา + ค้นหา board จาก issue ต้นทาง
                 -- 📌 E1 ('suggestion') **ไม่เพิ่ม index** โดยเจตนา: ตัวกรองทุกเส้นทางนำด้วย
                 --    `status = 'active'` เสมอ ⇒ `idx_piri_boards_status_created` ใช้ได้อยู่แล้ว

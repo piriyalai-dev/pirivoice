@@ -12,15 +12,21 @@ import re
 from pathlib import Path
 from typing import AsyncIterator, Optional, Protocol, runtime_checkable
 
-# 🔑 รูปแบบ key เดียวที่ทั้งระบบยอมรับ — ตรวจ **ก่อน** แตะดิสก์ทุกครั้ง
-#   issues/{issue_id}/{uuid}.webp        → ไฟล์เต็ม
-#   issues/{issue_id}/{uuid}_thumb.webp  → thumbnail
-# ⚠️ ไม่รับ subfolder อื่นในเฟสนี้ (เช่น tmp/) — tmp ใช้ภายใน LocalMediaStorage เท่านั้น
+# 🔑 รูปแบบ key ที่ทั้งระบบยอมรับ — ตรวจ **ก่อน** แตะดิสก์ทุกครั้ง
+#   issues/{issue_id}/{uuid}.webp              → รูปของเรื่อง (ฟีเจอร์เดิม)
+#   media/{owner_type}/{owner_id}/{uuid}.webp  → รูปของส่วนอื่น (บอร์ด/ประกาศ/กิจกรรม/โปรไฟล์)
+#   (ทั้งคู่มี _thumb.webp สำหรับ thumbnail)
+#
+# ⚠️ ไม่รับ subfolder อื่น (เช่น tmp/) — tmp ใช้ภายใน LocalMediaStorage เท่านั้น
 #    และไม่เคยถูกอ้างจาก DB ⇒ ถ้า storage_path ใน DB หลุดมาเป็น `../../etc/passwd`
 #    (หรือแถวถูกแก้โดยใครก็ตาม) pattern นี้จะปฏิเสธก่อนเปิดไฟล์
+# ⚠️ owner_type **เขียนเป็น alternation ของค่าที่รู้จัก** ไม่ใช่ `[a-z_]+` —
+#    ชนิดเจ้าของที่ไม่มี policy ต้องสร้าง key ไม่ได้ตั้งแต่ต้น (fail-closed)
+_UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+MEDIA_OWNER_TYPES = ("board", "board_comment", "announcement", "event", "user")
 KEY_PATTERN = re.compile(
-    r"^issues/\d+/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-    r"(_thumb)?\.webp$"
+    rf"^(?:issues|media/(?:{'|'.join(MEDIA_OWNER_TYPES)}))"
+    rf"/\d+/{_UUID_RE}(?:_thumb)?\.webp$"
 )
 
 MAX_KEY_LENGTH = 200

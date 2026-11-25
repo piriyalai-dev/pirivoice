@@ -31,7 +31,23 @@ from typing import Optional, Tuple
 from core.config import settings
 
 # โดเมนลายเซ็น — ขึ้นต้นด้วยค่านี้ทุกครั้ง (กันใช้ลายเซ็นข้ามบริบท)
-_SIGNING_CONTEXT = "issue-image:v1"
+#
+# ⭐ **scope** แยกโดเมน: `issue-image` = รูปของเรื่อง (path/โดเมนเดิม ห้ามเปลี่ยน)
+#    `media` = รูปของส่วนอื่น (บอร์ด/ประกาศ/กิจกรรม/โปรไฟล์) ⇒ ลายเซ็นของโดเมนหนึ่ง
+#    ใช้ข้ามอีกโดเมนไม่ได้ แม้ id จะบังเอิญตรงกัน
+_SCOPE_CONFIG = {
+    "issue-image": ("issue-image:v1", "/api/images"),
+    "media": ("media:v1", "/api/media/file"),
+}
+DEFAULT_SCOPE = "issue-image"
+_SIGNING_CONTEXT = _SCOPE_CONFIG[DEFAULT_SCOPE][0]
+
+
+def _scope_config(scope: str) -> tuple[str, str]:
+    try:
+        return _SCOPE_CONFIG[scope]
+    except KeyError:
+        raise ValueError(f"signing scope ไม่ถูกต้อง: {scope}") from None
 
 VALID_VARIANTS = ("full", "thumb")
 
@@ -39,8 +55,10 @@ VALID_VARIANTS = ("full", "thumb")
 _SIG_BYTES = 16
 
 
-def _sign(image_id: str, variant: str, viewer_id: int, exp: int) -> str:
-    message = f"{_SIGNING_CONTEXT}:{image_id}:{variant}:{viewer_id}:{exp}".encode()
+def _sign(
+    image_id: str, variant: str, viewer_id: int, exp: int, context: str = _SIGNING_CONTEXT
+) -> str:
+    message = f"{context}:{image_id}:{variant}:{viewer_id}:{exp}".encode()
     digest = hmac.new(settings.SECRET_KEY.encode(), message, hashlib.sha256).digest()
     return base64.urlsafe_b64encode(digest[:_SIG_BYTES]).decode().rstrip("=")
 
@@ -52,7 +70,12 @@ def _round_exp(now: int) -> int:
 
 
 def make_signature(
-    image_id: str, variant: str, viewer_id: int, now: Optional[int] = None
+    image_id: str,
+    variant: str,
+    viewer_id: int,
+    now: Optional[int] = None,
+    *,
+    scope: str = DEFAULT_SCOPE,
 ) -> Tuple[int, str]:
     """คืน `(exp, sig)` — ใช้ `sign_url()` ในเส้นทางปกติ
 
@@ -61,21 +84,32 @@ def make_signature(
     """
     if variant not in VALID_VARIANTS:
         raise ValueError(f"variant ไม่ถูกต้อง: {variant}")
+    context, _path = _scope_config(scope)
     current = int(now if now is not None else time.time())
     exp = _round_exp(current)
-    return exp, _sign(str(image_id), variant, int(viewer_id), exp)
+    return exp, _sign(str(image_id), variant, int(viewer_id), exp, context)
 
 
-def sign_url(image_id: str, variant: str, viewer_id: int, now: Optional[int] = None) -> str:
-    """path แบบ relative (`/api/images/...`) — frontend เติม `VITE_API_BASE_URL` เอง
+def sign_url(
+    image_id: str,
+    variant: str,
+    viewer_id: int,
+    now: Optional[int] = None,
+    *,
+    scope: str = DEFAULT_SCOPE,
+) -> str:
+    """path แบบ relative (`/api/images/...` · scope `media` → `/api/media/file/...`)
+
+    frontend เติม `VITE_API_BASE_URL` เอง
 
     ⚠️ **ไม่ประกอบ absolute URL ที่นี่** — backend ไม่รู้ว่าเบราว์เซอร์เข้าผ่านโดเมนไหน
        (Cloudflare/staging/localhost) และ `request.base_url` ที่ผิดจะทำให้ `<img>`
        ชี้ไปโดเมนที่ไม่มีอยู่ ⇒ ปล่อยให้ frontend ซึ่งรู้ base ของตัวเองเป็นคนเติม
     """
-    exp, sig = make_signature(str(image_id), variant, viewer_id, now=now)
+    _context, base_path = _scope_config(scope)
+    exp, sig = make_signature(str(image_id), variant, viewer_id, now=now, scope=scope)
     return (
-        f"/api/images/{image_id}?variant={variant}"
+        f"{base_path}/{image_id}?variant={variant}"
         f"&viewer={int(viewer_id)}&exp={exp}&sig={sig}"
     )
 
@@ -87,6 +121,8 @@ def verify_signature(
     exp: Optional[str],
     sig: Optional[str],
     now: Optional[int] = None,
+    *,
+    scope: str = DEFAULT_SCOPE,
 ) -> Optional[Tuple[int, str]]:
     """ตรวจลายเซ็น + เวลา — คืน `(viewer_id, variant)` หรือ `None` ถ้าไม่ผ่าน
 
@@ -97,6 +133,10 @@ def verify_signature(
     if not isinstance(variant, str) or variant not in VALID_VARIANTS:
         return None
     if not isinstance(viewer, str) or not isinstance(exp, str) or not isinstance(sig, str):
+        return None
+    try:
+        context, _path = _scope_config(scope)
+    except ValueError:
         return None
     try:
         # int() เข้ม: "12x" / "" / "1.0" / " 1" (ไม่ strip) ไม่ผ่านทั้งหมด
@@ -113,7 +153,7 @@ def verify_signature(
     # (กรณีหลังไม่ใช่ช่องโหว่ — ลายเซ็นปลอมไม่ได้ — แต่กันความผิดพลาดของการคำนวณฝั่งออก URL)
     if exp_ts < current or exp_ts > current + ttl + step:
         return None
-    expected = _sign(str(image_id), variant, viewer_id, exp_ts)
+    expected = _sign(str(image_id), variant, viewer_id, exp_ts, context)
     if not hmac.compare_digest(sig, expected):
         return None
     return viewer_id, variant

@@ -115,3 +115,46 @@ async def test_missing_file_read_raises(storage):
     with pytest.raises(MediaStorageError):
         async for _ in storage.read_stream(_key()):
             pass
+
+
+# ============================================================
+# 🖼️ key ของรูปกลาง (media/{owner_type}/{owner_id}/...)
+# ============================================================
+@pytest.mark.parametrize(
+    "key_tpl",
+    [
+        "media/board/7/{u}.webp",
+        "media/board/7/{u}_thumb.webp",
+        "media/board_comment/12/{u}.webp",
+        "media/announcement/3/{u}.webp",
+        "media/event/9/{u}.webp",
+        "media/user/1/{u}.webp",
+    ],
+)
+@pytest.mark.asyncio
+async def test_media_keys_accepted_and_roundtrip(tmp_path, key_tpl):
+    s = LocalMediaStorage(str(tmp_path))
+    key = key_tpl.format(u=uuid.uuid4())
+    await s.write(key, b"data")
+    path = s.local_path(key)
+    assert path is not None and path.is_file()
+
+
+@pytest.mark.parametrize(
+    "key_tpl",
+    [
+        "media/other/7/{u}.webp",          # owner_type ไม่อยู่ใน registry
+        "media/board/../7/{u}.webp",       # traversal
+        "media/board/7/../{u}.webp",
+        "media/BOARD/7/{u}.webp",          # case-sensitive
+        "media/board/7/{u}.png",           # ต้องเป็น webp
+        "media/board/7/{u}.webp.bak",
+        "media/board/x/{u}.webp",          # owner_id ไม่ใช่ตัวเลข
+        "media/board/7/{u}thumb.webp",     # ต้องมี _ ก่อน thumb
+    ],
+)
+def test_bad_media_keys_rejected(tmp_path, key_tpl):
+    s = LocalMediaStorage(str(tmp_path))
+    key = key_tpl.format(u=uuid.uuid4())
+    with pytest.raises(MediaStorageError):
+        s.local_path(key)

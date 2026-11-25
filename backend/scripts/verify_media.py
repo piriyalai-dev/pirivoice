@@ -48,7 +48,14 @@ async def _hash_file(path) -> str:
     return await asyncio.to_thread(_hash_sync, path)
 
 
-async def _check_row(row, storage: LocalMediaStorage, skip_hash: bool, sem: asyncio.Semaphore) -> dict:
+# (ตาราง, prefix) — ไฟล์ใต้ `media/` ไม่ใช่ orphan ของ `issue_images` และกลับกัน
+FAMILIES: tuple[tuple[str, str], ...] = (
+    ("issue_images", "issues"),
+    ("media_images", "media"),
+)
+
+
+async def _check_row(row, storage: LocalMediaStorage, skip_hash: bool, sem: asyncio.Semaphore, table: str) -> dict:
     """ตรวจแถวเดียว → dict ของปัญหา (คีย์ว่าง = ผ่าน)"""
     problems: dict[str, str] = {}
     keys = {"full": row["storage_path"], "thumb": row["thumb_path"]}
@@ -77,21 +84,26 @@ async def _check_row(row, storage: LocalMediaStorage, skip_hash: bool, sem: asyn
 
     if problems:
         problems["_id"] = str(row["id"])
-        problems["_issue_id"] = str(row["issue_id"])
+        problems["_table"] = table
+        if row.get("owner_type") is not None:
+            problems["_ref"] = f"{row['owner_type']} {row['owner_id']}"
+        else:
+            problems["_ref"] = f"issue {row['issue_id']}"
         problems["_deleted"] = "yes" if row["deleted_at"] else "no"
     return problems
 
 
 def _scan_disk(storage: LocalMediaStorage) -> set[str]:
-    """relative path ของทุกไฟล์ใต้ issues/ (posix)"""
-    issues_dir = storage.root / "issues"
+    """relative path ของทุกไฟล์ใต้ prefix ของทุกครอบครัว (posix)"""
     found: set[str] = set()
-    if not issues_dir.is_dir():
-        return found
-    for dirpath, _dirnames, filenames in os.walk(issues_dir):
-        for name in filenames:
-            full = os.path.join(dirpath, name)
-            found.add(os.path.relpath(full, storage.root).replace(os.sep, "/"))
+    for _table, prefix in FAMILIES:
+        base = storage.root / prefix
+        if not base.is_dir():
+            continue
+        for dirpath, _dirnames, filenames in os.walk(base):
+            for name in filenames:
+                full = os.path.join(dirpath, name)
+                found.add(os.path.relpath(full, storage.root).replace(os.sep, "/"))
     return found
 
 
@@ -124,20 +136,22 @@ async def main() -> int:
         print(f"❌ เชื่อมต่อ DB ไม่ได้: {e}", file=sys.stderr)
         return 2
 
+    rows = []
     async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT id, issue_id, storage_path, thumb_path, sha256, thumb_sha256, deleted_at
-            FROM issue_images
-            ORDER BY created_at
-            """
-        )
+        # ⚠️ ชื่อตารางมาจาก FAMILIES (ค่าคงที่) ไม่ใช่ input ของผู้ใช้
+        for table, _prefix in FAMILIES:
+            rows.extend(
+                (table, r)
+                for r in await conn.fetch(f"SELECT * FROM {table} ORDER BY created_at")
+            )
 
-    results = await asyncio.gather(*(_check_row(r, storage, args.skip_hash, sem) for r in rows))
+    results = await asyncio.gather(
+        *(_check_row(r, storage, args.skip_hash, sem, table) for table, r in rows)
+    )
     problems = [p for p in results if p]
 
     referenced: set[str] = set()
-    for r in rows:
+    for _table, r in rows:
         if r["storage_path"]:
             referenced.add(r["storage_path"])
         if r["thumb_path"]:
@@ -151,7 +165,7 @@ async def main() -> int:
             if not key.startswith("_"):
                 counts[key] += 1
 
-    soft_deleted = sum(1 for r in rows if r["deleted_at"])
+    soft_deleted = sum(1 for _t, r in rows if r["deleted_at"])
     drift = bool(problems or orphans)
 
     if args.json:
@@ -183,7 +197,7 @@ async def main() -> int:
 
             def lines_for(kind: str) -> list[str]:
                 return [
-                    f"image {p['_id']} (issue {p['_issue_id']}, deleted={p['_deleted']}): {p[kind]}"
+                    f"image {p['_id']} [{p['_table']}] ({p['_ref']}, deleted={p['_deleted']}): {p[kind]}"
                     for p in problems
                     if kind in p
                 ]

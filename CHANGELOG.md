@@ -127,6 +127,62 @@ commit แรก `1557490` 8 ส.ค. 2026 — Initial commit 99 ไฟล์ 15
 
 ---
 
+## [Unreleased] — รูปภาพใช้ได้ทุกส่วน ไม่ใช่แค่เรื่อง
+
+**บริบท ณ ตอนนั้น** — รุ่นก่อนหน้าเพิ่งวาง "ท่อ" รูปภาพไว้ แต่ใช้ได้กับ **เรื่องเท่านั้น**
+(`issue_images` + signed URL + volume `media_data`) ทั้งที่ส่วนอื่นมีที่ทางรออยู่แล้ว:
+`piri_boards.cover_image_url` กับ `piri_board_comments.image_url` มีคอลัมน์แต่ไม่มีใครเขียน
+`events.cover_image_url` รับได้แต่ลิงก์ภายนอกที่ผู้ใช้อัปเองที่อื่น
+ประกาศไม่มีคอลัมน์รูปเลย และ avatar ทั้งระบบเป็นตัวอักษรย่อจาก `users.avatar_url` ที่ว่างเปล่า
+⇒ ครูที่ใช้ระบบจริงยังต้องฝากรูปผ่าน Facebook/LINE อยู่วันยังค่ำ
+
+**สิ่งที่ทำ** (รอบนี้ = แกนกลาง ยังไม่เปิดในหน้าจอ — UI มาในรอบถัดไป)
+
+- migration `032_media_images` — ตารางกลาง `media_images(owner_type, owner_id)` แบบ polymorphic
+  ครอบ 5 ชนิดเจ้าของ (`board` · `board_comment` · `announcement` · `event` · `user`)
+  พร้อม partial unique index `uq_media_single_cover` กันปก/avatar ซ้ำซ้อน
+  และ `uq_media_storage_path` กัน key ชนกัน
+- `core/media/base.py` — `KEY_PATTERN` รองรับ 2 ครอบครัว (`issues/...` เดิม และ `media/{owner_type}/...`)
+  ด้วยรายชื่อ owner_type ที่เขียนตายตัว ไม่ใช่ `[a-z_]+` (fail-closed: ชนิดใหม่ที่ไม่ได้ลงทะเบียน = เขียนไฟล์ไม่ได้)
+- `core/media_signing.py` — เพิ่ม **scope** ของลายเซ็น (`issue-image` คงเดิมทุกไบต์ / `media` → context `media:v1`)
+  ⇒ ลายเซ็นของเรื่องเอาไปเปิดรูปกลางไม่ได้และกลับกัน
+- `services/media_policies.py` — registry แบบ **fail-closed**: `get_policy()` โยน
+  `ValidationError` ทันทีเมื่อเจอ `owner_type` ที่ไม่รู้จัก (ไม่มี default ให้ลืมลงทะเบียนแล้วหลุด)
+  แต่ละ policy มี `assert_can_upload/assert_can_view/assert_can_delete` ของตัวเอง
+  และ **เรียกตรรกะของโดเมนนั้นซ้ำ** ไม่ประดิษฐ์กติกาใหม่
+- `services/media_service.py` — อัปโหลดยืมตัวประมวลผลรูปของ `image_service` (import ไม่ copy
+  ⇒ EXIF/resize/HEIC/bomb มีชุดเดียว) · "เปลี่ยนปก" = soft-delete ของเดิม + INSERT ใหม่ในทรานแซกชันเดียว
+  · ไฟล์เขียนก่อน INSERT (กำพร้าดีกว่าแถวชี้ไฟล์ที่ไม่มี) · rate limit ชั่วโมงละ 20 นับ **ทุกแถวที่สร้าง**
+  ไม่กรอง `deleted_at` (ไม่งั้นสลับปกวนเพื่อข้ามเพดานได้)
+- API — `POST/GET/DELETE /api/media/{owner_type}/{owner_id}` + `GET /api/media/file/{image_id}`
+  · `backend/routers/media_router.py` แยกจาก `issue_router` โดยสิ้นเชิง
+  (helper ที่ต้องใช้ร่วมก็อปไว้ใน `_media_http.py` — จงใจซ้ำดีกว่ามาแก้ router ที่ใช้งานอยู่)
+- Maintenance — `purge_media.py`/`verify_media.py` วนตาม **(ตาราง, prefix)** ทั้งสองครอบครัว
+  ⇒ ไฟล์ใต้ `media/` ไม่ถูกนับเป็น orphan ของ `issue_images`
+- เทสต์ — 81 เทสต์ใหม่ (registry fail-closed, upload/delete matrix, เพดาน, rate limit,
+  scope ข้ามโดเมน, serving หลังเจ้าของถูกลบ, path traversal ทั้งสองทาง)
+- label ใหม่ในหน้าบันทึกการใช้งาน: `CREATE_MEDIA_IMAGE` / `DELETE_MEDIA_IMAGE`
+
+**ตัดสินใจเพราะ** — เจ้าของ 5 ตารางใช้ FK ร่วมกันไม่ได้ ถ้าแยกตารางต่อเจ้าของจะต้องเขียน
+storage/signing/purge ซ้ำ 5 ชุดและจะเพี้ยนจากกันใน 6 เดือน ⇒ ตารางเดียว polymorphic
+**แลก FK ทิ้ง แต่ชดเชยด้วยการตรวจสิทธิ์สดทุกครั้งที่เสิร์ฟ** (FK บอกได้แค่ว่าแถวมีจริง
+ไม่ได้บอกว่าผู้ดูมีสิทธิ์เห็น) · `uploaded_by` **ไม่ถูกส่งออกใน payload เลย** เพราะบอร์ด/คอมเมนต์
+เป็น anonymous — รูปเป็นของเจ้าของเนื้อหา ⇒ เปิดเผยผู้อัป = เปิดเผยผู้เขียน
+
+**เทคโนโลยีที่เปลี่ยน/ลอง** — scope ใน HMAC context (ครั้งแรกที่ลายเซ็นชุดเดียวให้บริการสองโดเมน),
+partial unique index แทน application-level lock สำหรับ "มีได้ชิ้นเดียว"
+
+**บทเรียน** — เพดานที่กรอง `deleted_at` จะกลายเป็น "เพดานที่รีเซ็ตได้ด้วยการแทนที่ของเดิม"
+⇒ นับ "งานที่ทำ" ไม่ใช่ "สิ่งที่ยังเหลือ" · และการทำให้ pattern ของ key หลวมขึ้น
+เป็นจุดที่ traversal กลับมาได้ง่ายที่สุด — ต้องมีเทสต์ทั้งทางรับและทางปฏิเสธ
+
+**Migration:** `032_media_images` — สร้างตาราง `media_images` + index 4 ตัว (idempotent)
+· ไม่มี backfill · ไม่แตะ `issue_images`/`issues.image_url`/`piri_boards.cover_image_url`
+(คอลัมน์ legacy คงไว้เป็น fallback) · rollback = `DROP TABLE media_images`
+(ไม่มี FK เข้ามา จึงไม่ต้อง CASCADE · ไฟล์ใต้ `media/` กลายเป็น orphan แล้ว purge เก็บให้)
+
+---
+
 ## [Unreleased] — เก็บรูปหลักฐานของเรื่องไว้บนเซิร์ฟเวอร์
 
 **บริบท ณ ตอนนั้น** — ระบบรับเรื่องได้ แต่ **เก็บหลักฐานรูปไม่ได้เลย** —
