@@ -35,6 +35,37 @@ class Settings(BaseSettings):
     # อายุงานค้าง (นาที) ที่ worker กู้คืนตอนเริ่มต้น — PROCESSING/QUEUED ค้างเกินนี้ → reset กลับ QUEUED
     IMPORT_RECOVERY_STALE_MINUTES: int = 35
 
+    # ============================================================
+    # 🖼️ รูปภาพของเรื่อง (issue images) — Phase 1
+    # ------------------------------------------------------------
+    # เก็บไฟล์บน named volume `${ENV_NAME}_media_data` (shared ระหว่าง backend 3 replica)
+    # ⚠️ local driver ผูกกับ node เดียว — ถ้าวันหน้าขยาย multi-node ต้องย้ายไป S3/R2
+    #    (service เรียกผ่าน `core/media` interface จึงเปลี่ยน backend ได้โดยไม่แตะ service)
+    # ============================================================
+    MEDIA_STORAGE_BACKEND: str = "local"
+    MEDIA_STORAGE_DIR: str = "/data/media"
+    # ขนาดไฟล์ต้นทางที่รับได้ (MB) — ตรวจก่อนย่อ/แปลง
+    MEDIA_IMAGE_SIZE_LIMIT_MB: int = 10
+    # จำนวนรูปสูงสุดต่อเรื่อง แยกตามชนิด (ผู้แจ้ง = report · ผู้รับงาน = progress)
+    MEDIA_MAX_REPORT_IMAGES: int = 3
+    MEDIA_MAX_PROGRESS_IMAGES: int = 3
+    # จำนวนไฟล์ต่อ 1 request (ผู้ใช้เลือกพร้อมกันได้สูงสุดเท่านี้)
+    MEDIA_MAX_UPLOAD_PER_REQUEST: int = 3
+    # เพดานอัปโหลดต่อผู้ใช้ต่อชั่วโมง (กันสแปม/เผลออัปซ้ำ)
+    MEDIA_MAX_UPLOAD_PER_HOUR: int = 20
+    # ขนาดผลลัพธ์: ย่อด้านยาวสุด 1600px, thumbnail 480px, WebP quality 80
+    MEDIA_MAX_DIMENSION: int = 1600
+    MEDIA_MIN_DIMENSION: int = 64
+    MEDIA_THUMB_DIMENSION: int = 480
+    MEDIA_WEBP_QUALITY: int = 80
+    # Signed URL: อายุ 15 นาที และปัด exp เป็นรอบ 5 นาที เพื่อให้ URL เดิมซ้ำได้ในหน้าต่างสั้นๆ
+    MEDIA_URL_SIGNING_TTL_SECONDS: int = 900
+    MEDIA_URL_EXP_ROUND_SECONDS: int = 300
+    # Read receipt: เปิดซ้ำภายในกี่นาทีไม่เพิ่ม view_count
+    MEDIA_VIEW_DEDUPE_MINUTES: int = 10
+    # soft-deleted image เก็บไฟล์บนดิสก์ไว้นานเท่าไรก่อน purge
+    MEDIA_PURGE_AFTER_DAYS: int = 30
+
     # Seed users (admin/ครูสภา/ประธานสภา) ตอนเปิดระบบครั้งแรก — ไฟล์เก็บ username+รหัสชั่วคราว
     SEED_CREDENTIALS_FILE: str = "default_admin_credentials.txt"
 

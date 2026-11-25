@@ -1,9 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 import asyncpg
 
+from core.config import settings
 from core.dependencies import get_db_pool, get_current_user
 from core.rbac import require_permission_anywhere, get_manage_mode
-from core.exceptions import NotFoundError, ForbiddenError, ValidationError, ConflictError
+from core.exceptions import (
+    NotFoundError, ForbiddenError, ValidationError, ConflictError,
+    PayloadTooLargeError, RateLimitError,
+)
 from core.categories import all_main_category_codes
 from models.issue_schemas import (
     IssueCreateRequest, IssueUpdateRequest, IssueOut, IssueStepOut, IssueCountdownOut,
@@ -11,7 +15,9 @@ from models.issue_schemas import (
     ApproveToPublicRequest, CommentCreateRequest, CommentOut, IssueListOut,
     MyIssueSummaryOut, ReassignRequest, OrphanedAssignmentsOut,
 )
+from models.image_schemas import IssueImageListOut
 from services import issue_service
+from services import image_service
 from services import audit_service
 
 router = APIRouter(prefix="/issues", tags=["Issues"])
@@ -35,7 +41,32 @@ def _err(e: Exception):
         return HTTPException(status_code=400, detail=str(e))
     if isinstance(e, ConflictError):
         return HTTPException(status_code=409, detail=str(e))
+    if isinstance(e, PayloadTooLargeError):
+        return HTTPException(status_code=413, detail=str(e))
+    if isinstance(e, RateLimitError):
+        return HTTPException(status_code=429, detail=str(e))
     return HTTPException(status_code=500, detail=f"เกิดข้อผิดพลาด: {e}")
+
+
+async def _read_upload_capped(upload: UploadFile) -> bytes:
+    """อ่านไฟล์อัปโหลดแบบมีเพดาน — **ไม่เรียก `await file.read()` เปล่า ๆ**
+
+    ⚠️ `UploadFile.read()` ทั้งไฟล์จะ buffer ลง memory/disk ตามขนาดจริง ⇒ ผู้ใช้ส่งไฟล์ 2GB
+       จะทำให้ worker กินแรมก่อนที่เราจะได้ตรวจขนาด
+    ⚠️ อ่านเกินเพดาน **1 chunk** แล้วค่อย raise — เลี่ยงอ่านไฟล์ทั้งไฟล์เพื่อหาว่าใหญ่เกิน
+    """
+    limit = int(settings.MEDIA_IMAGE_SIZE_LIMIT_MB) * 1024 * 1024
+    buf = bytearray()
+    while True:
+        chunk = await upload.read(1024 * 1024)
+        if not chunk:
+            break
+        if len(buf) + len(chunk) > limit:
+            raise PayloadTooLargeError(
+                f"รูปใหญ่เกิน {settings.MEDIA_IMAGE_SIZE_LIMIT_MB} MB"
+            )
+        buf.extend(chunk)
+    return bytes(buf)
 
 
 @router.post("", response_model=IssueOut)
@@ -170,6 +201,71 @@ async def reassign_issue(
             to_user_id=req.to_user_id, note=req.note,
         )
     except (NotFoundError, ForbiddenError, ValidationError, ConflictError) as e:
+        raise _err(e)
+
+
+# ==================== 🖼️ รูปภาพของเรื่อง ====================
+# ⚠️ เส้นทางเหล่านี้ต้องประกาศ **ก่อน** `GET /{issue_id}` เพื่อให้อ่านง่าย (แม้ FastAPI
+#    จะแยกตามจำนวน segment ได้เองก็ตาม) — และ `GET /images/{id}` ที่เสิร์ฟไฟล์จริง
+#    อยู่ใน `routers/image_router.py` (ไม่มี auth header — ใช้ signed URL)
+@router.post("/{issue_id}/images", response_model=IssueImageListOut)
+async def upload_issue_images(
+    issue_id: int,
+    files: list[UploadFile] = File(..., description="รูป 1–3 ไฟล์: JPEG/PNG/WebP/HEIC"),
+    kind: str | None = Form(None, description="เฉพาะผู้ที่เป็นทั้งผู้แจ้งและผู้รับ: report/progress"),
+    user_ctx: dict = Depends(get_current_user),
+    pool: asyncpg.Pool = Depends(get_db_pool),
+):
+    """แนบรูปเข้ากับเรื่อง — ผู้แจ้ง (report) หรือผู้รับปัจจุบัน (progress)
+
+    ชนิดรูปตัดสินจากตัวตนฝั่ง server (ไม่เชื่อ client) — ดู `image_service.upload_images`
+    """
+    uid = _ensure_user(user_ctx)
+    if not files:
+        raise HTTPException(status_code=400, detail="ไม่มีไฟล์ที่จะอัปโหลด")
+    try:
+        payload = []
+        for f in files:
+            raw = await _read_upload_capped(f)
+            payload.append((f.filename or "image", raw))
+        result = await image_service.upload_images(
+            pool, uid, issue_id, payload, requested_kind=kind
+        )
+    except (NotFoundError, ForbiddenError, ValidationError, PayloadTooLargeError, RateLimitError) as e:
+        raise _err(e)
+    return IssueImageListOut(**result)
+
+
+@router.get("/{issue_id}/images", response_model=IssueImageListOut)
+async def list_issue_images(
+    issue_id: int,
+    user_ctx: dict = Depends(get_current_user),
+    pool: asyncpg.Pool = Depends(get_db_pool),
+):
+    """รายการรูป + signed URL — ผู้ที่มองเห็นเรื่องได้เห็นรูปทั้งหมด (ตามที่ล็อกไว้)
+
+    receipt ถูกส่งกลับเฉพาะผู้แจ้ง/แอดมิน (คนอื่นไม่ควรรู้ว่าใครเปิดดูหลักฐานบ้าง)
+    """
+    uid = _ensure_user(user_ctx)
+    try:
+        result = await image_service.list_images(pool, uid, issue_id)
+    except (NotFoundError, ForbiddenError) as e:
+        raise _err(e)
+    return IssueImageListOut(**result)
+
+
+@router.delete("/{issue_id}/images/{image_id}", response_model=dict)
+async def delete_issue_image(
+    issue_id: int,
+    image_id: str,
+    user_ctx: dict = Depends(get_current_user),
+    pool: asyncpg.Pool = Depends(get_db_pool),
+):
+    """ลบรูป (soft delete) — ผู้อัปโหลดเอง (เรื่องยังไม่ปิด) หรือแอดมิน"""
+    uid = _ensure_user(user_ctx)
+    try:
+        return await image_service.delete_image(pool, uid, issue_id, image_id)
+    except (NotFoundError, ForbiddenError) as e:
         raise _err(e)
 
 

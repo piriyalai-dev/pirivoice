@@ -127,7 +127,71 @@ commit แรก `1557490` 8 ส.ค. 2026 — Initial commit 99 ไฟล์ 15
 
 ---
 
-## [Unreleased] — แก้ race ของ CI ตอนปล่อย v2.4.0
+## [Unreleased] — เก็บรูปหลักฐานของเรื่องไว้บนเซิร์ฟเวอร์
+
+**บริบท ณ ตอนนั้น** — ระบบรับเรื่องได้ แต่ **เก็บหลักฐานรูปไม่ได้เลย** —
+`issues.image_url` มีคอลัมน์อยู่แต่ไม่เคยถูกเขียน ไม่มี endpoint อัปโหลด
+หน้าแจ้งเรื่องจึงจดเหตุผลไว้ตรง ๆ ว่า backend ยังไม่รองรับ
+ผู้แจ้งต้องอธิบายปัญหาด้วยข้อความล้วน และคณะห้องต้องเดาว่าของจริงพังอย่างไร
+ส่วนผู้แจ้งเองก็ไม่รู้เลยว่าผู้รับผิดชอบเปิดดูเรื่องหรือยัง
+
+**สิ่งที่ทำ**
+
+- migration `031_issue_images` — ตาราง `issue_images` (metadata + sha256 + soft delete)
+  และ `issue_image_views` (read receipt หนึ่งแถวต่อ image × viewer) พร้อม index
+  mirror ใน `init_db.py` และเพิ่ม advisory lock ให้ migration runner
+  (backend 3 replica บูตพร้อมกันไม่แย่งกันสร้าง index)
+- `core/media/` — `MediaStorage` Protocol + `LocalMediaStorage`
+  เขียนแบบ atomic (`tmp/ → os.replace`) · key ผ่าน pattern + containment ก่อนแตะดิสก์ทุกครั้ง
+  · interface เตรียมทางย้ายไป S3/R2 โดยไม่แก้ service
+- `image_service` — ตรวจ magic bytes (JPEG/PNG/WebP/HEIC ผ่าน pillow-heif),
+  ย่อด้านยาวสุด 1600px, แปลง WebP q80, ล้าง EXIF, ทำ thumbnail 480px,
+  เก็บ sha256, จำกัด 3 รูป/ผู้แจ้ง + 3 รูป/ผู้รับ, 20 รูป/ชั่วโมง/คน, soft delete
+- API — `POST/GET/DELETE /api/issues/{id}/images` และ `GET /api/images/{id}`
+  ที่ใช้ **signed URL** (HMAC-SHA256, ผูกกับ viewer, exp ปัดเป็นรอบ 5 นาที,
+  ตรวจสิทธิ์ซ้ำทุกครั้งที่ GET) + audit `CREATE_ISSUE_IMAGE`/`DELETE_ISSUE_IMAGE`
+- Read receipt — คำนวณจาก `issues.current_assignee_id` ตอนอ่าน
+  (เปลี่ยนผู้รับแล้วสถานะสะท้อนคนใหม่ทันที) · dedupe 10 นาที · แยก
+  "ผู้รับผิดชอบเปิดแล้ว" ออกจาก "เพื่อนร่วมห้องเปิด"
+- Frontend — ย่อรูปในเบราว์เซอร์ (canvas → WebP, ถอด HEIC ไม่ได้ส่งต้นฉบับ),
+  อัปโหลดหลังสร้างเรื่องสำเร็จ (แจ้งชัดถ้าเรื่องถูกสร้างแล้วแต่แนบรูปไม่สำเร็จ),
+  แกลเลอรี + lightbox, ป้าย receipt, ข้อความเตือนว่าเพื่อนร่วมห้อง/คณะห้องเห็นรูป,
+  label ใหม่ในหน้าบันทึกการใช้งาน
+- เทสต์ — backend 64 เทสต์ใหม่ (permission matrix, validation, signed URL,
+  receipt/dedupe, path traversal, ไฟล์หาย) + unit test ฝั่ง frontend
+- `ops/backup/` — `backup.sh` (pg_dump → media tar → retention 30 วัน → rclone copy),
+  `check_disk.sh` (80/90%), `restore.sh` (ซ้อมกู้บน scratch DB),
+  `purge_media.sh` + `verify_media.py` (sha256 ต่อแถว/orphan) พร้อม README และ cron
+
+**ตัดสินใจเพราะ** — `<img>` ส่ง Bearer token ไม่ได้ จึงใช้ signed URL อายุสั้น
+แต่ลายเซ็นอย่างเดียวไม่พอ: URL ที่แชร์ต่อต้องเปิดในนามคนอื่นไม่ได้ ⇒ ผูก signature
+กับ `viewer` และ **ตรวจสิทธิ์ซ้ำตอน GET** · ไฟล์อยู่บน named volume เดียว
+เพื่อให้ backend 3 replica เห็นรูปชุดเดียวกัน · receipt คำนวณสดแทนการเก็บ flag
+เพื่อไม่ให้สถานะค้างที่ผู้รับคนเก่า · storage แยก interface ตั้งแต่แรกเพราะจุดที่แพง
+ของการย้ายไป S3/R2 คือทุก service ที่เรียกมัน ไม่ใช่ตัว `write()` เอง
+
+**เทคโนโลยีที่เปลี่ยน/ลอง** — Pillow 13 + pillow-heif, HMAC signed URL
+(ตัวแรกในระบบที่ไม่ได้ผ่าน JWT), canvas compression ฝั่งเบราว์เซอร์,
+Docker named volume ที่แชร์ข้าม replica, `pg_dump -Fc` + tar ผ่าน container,
+rclone ใน one-off container
+
+**พังแล้วแก้อย่างไร** — fixture เทสต์ห้องชน `AmbiguousParameterError`
+เพราะ reuse `$1` ทั้ง `VARCHAR(10)` และ `TEXT` → แยกเป็น `$1,$2` ·
+เทสต์ receipt อ่าน URL จาก response ของผู้แจ้งแล้ว GET ในนามผู้รับ
+จึงไม่ถูกบันทึก view (URL ผูกกับผู้ดู) → เปลี่ยนไปเอา URL จาก `list_images`
+ในนามผู้รับ · ESLint `vue/no-dupe-keys` เพราะ prop `canDelete` ชนชื่อฟังก์ชัน
+→ เปลี่ยนฟังก์ชันเป็น `isDeletable`
+
+**บทเรียน** — URL ที่ "ไว้ใจได้" ต้องผูกกับ **คนที่เปิด** ไม่ใช่แค่ลายเซ็น
+และสิทธิ์ต้องถูกตรวจซ้ำทุกครั้ง ไม่ใช่ครั้งเดียวตอนออก URL
+ส่วนฝั่งเทสต์: signed URL ทุกใบมีเจ้าของ — ใช้ใบของคนอื่นแล้วผลลัพธ์จะเงียบ ๆ ผิด
+
+**Migration:** `031_issue_images` — สร้าง `issue_images` และ `issue_image_views`
+พร้อม index (idempotent, มี advisory lock ในตัวรัน migration) · ไม่มี backfill
+· ไม่แตะ `issues.image_url` (คงเป็น legacy fallback) · rollback = `DROP TABLE ... CASCADE`
+(ไฟล์บนดิสก์ยังอยู่แต่ไม่มีแถวอ้าง → ถือเป็น orphan แล้วถูกเก็บโดย purge)
+
+### ของแถมในรุ่นนี้ — แก้ race ของ CI ตอนปล่อย v2.4.0
 
 **บริบท ณ ตอนนั้น** — ตอนปล่อย v2.4.0 สคริปต์ push `main` แล้ว push tag แยกกันสองคำสั่ง
 CI เริ่มวิ่งบน `main` ในช่องว่างนั้น — checkout เสร็จก่อน tag `v2.4.0` ขึ้น จึงฟ้อง

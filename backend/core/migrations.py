@@ -48,6 +48,13 @@ async def run_migrations(pool) -> None:
     """
     async with pool.acquire() as conn:
         async with conn.transaction():
+            # 🔒 advisory lock ระดับ transaction — backend ทั้ง 3 replica บูตพร้อมกันตอน
+            # `docker stack deploy` (order: start-first) ⇒ ถ้าไม่มีตัวนี้ ทั้งสามจะอ่าน
+            # `schema_migrations` พร้อมกันว่า "ยังไม่ได้รัน 031" แล้วพยายาม CREATE INDEX
+            # ซ้อนกัน (IF NOT EXISTS ช่วยได้บางกรณี แต่ concurrent CREATE INDEX บนตาราง
+            # เดียวกันยัง block กันจนเลื่อนเป็น deadlock/lock timeout ได้)
+            # `pg_advisory_xact_lock` ปลดล็อกเองตอน commit — ไม่ต้อง unlock ด้วยมือ
+            await conn.execute("SELECT pg_advisory_xact_lock(hashtext('piri_schema_migrations'))")
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS schema_migrations (
                     version TEXT PRIMARY KEY,
