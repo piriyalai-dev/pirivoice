@@ -3,9 +3,14 @@ import { ref, computed } from 'vue'
 import Swal from 'sweetalert2'
 import { BRAND } from '@/constants/brand'
 import { addComment, reportComment, hideComment } from '@/services/board'
+import { uploadMedia } from '@/services/media'
+import { compressImages } from '@/utils/imageCompress'
+import { DEFAULT_MEDIA_LIMITS } from '@/types/media'
 import { REPORT_REASON_LABELS, type BoardComment, type ReportReason } from '@/types/board'
 import { fmtDayTime } from '@/datetime'
 import { useAuthStore } from '@/stores/auth'
+import ImagePicker from '@/components/media/ImagePicker.vue'
+import MediaThumb from '@/components/media/MediaThumb.vue'
 
 /**
  * 💬 คอมเมนต์ 1 อัน + รีพลายซ้อน (recursive — อ้างอิงตัวเองด้วยชื่อไฟล์)
@@ -22,10 +27,14 @@ const emit = defineEmits<{ refresh: [] }>()
 const authStore = useAuthStore()
 const replying = ref(false)
 const replyBody = ref('')
+/** 🖼️ รูปที่เลือกไว้กับรีพลายนี้ — อัปหลังคอมเมนต์เกิดแล้ว (ต้องมี id) */
+const replyFiles = ref<File[]>([])
 const posting = ref(false)
 const acting = ref(false) // กันกดซ้ำระหว่าง report/hide ทำงาน
 
-const isOwn = computed(() => props.comment.user_id != null && props.comment.user_id === authStore.user?.id)
+const isOwn = computed(
+  () => props.comment.user_id != null && props.comment.user_id === authStore.user?.id,
+)
 
 // 🕐 `fmtDayTime` (จาก `@/datetime`) — ปีซ้ำกับหัวกระทู้ที่อยู่เหนือขึ้นไป จึงไม่ต้องโชว์ซ้ำ
 //    ⚠️ ฟังก์ชันที่เคยอยู่ในไฟล์นี้ชื่อ `fmtTime` ซึ่ง **สื่อผิด** — มันมีทั้งวันและเวลา
@@ -35,13 +44,35 @@ async function submitReply() {
   if (!body) return
   posting.value = true
   try {
-    await addComment(props.boardId, body, props.comment.id)
+    const created = await addComment(props.boardId, body, props.comment.id)
     replyBody.value = ''
     replying.value = false
+
+    // 🖼️ รีพลายเกิดแล้ว ⇒ อัปรูปที่เลือกไว้ (ถ้ามี)
+    //    ⚠️ อัปไม่สำเร็จ = รีพลายยังอยู่ (ผู้ใช้ลบ/แนบใหม่ไม่ได้ในเฟสนี้ — แจ้งให้รู้)
+    if (replyFiles.value.length) {
+      try {
+        const prepared = await compressImages(replyFiles.value)
+        await uploadMedia('board_comment', created.id, prepared)
+      } catch (e) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'ตอบกลับแล้ว แต่แนบรูปไม่สำเร็จ',
+          text: e instanceof Error ? e.message : 'เกิดข้อผิดพลาด',
+          confirmButtonColor: BRAND,
+        })
+      }
+      replyFiles.value = []
+    }
+
     Swal.fire({ icon: 'success', title: 'ตอบกลับแล้ว', timer: 1000, showConfirmButton: false })
     emit('refresh')
   } catch (e) {
-    Swal.fire({ icon: 'error', title: 'ตอบกลับไม่สำเร็จ', text: e instanceof Error ? e.message : String(e) })
+    Swal.fire({
+      icon: 'error',
+      title: 'ตอบกลับไม่สำเร็จ',
+      text: e instanceof Error ? e.message : String(e),
+    })
   } finally {
     posting.value = false
   }
@@ -80,9 +111,19 @@ async function handleReport() {
       reason: reason as ReportReason,
       detail: detail ? String(detail).trim() : undefined,
     })
-    Swal.fire({ icon: 'success', title: 'แจ้งแล้ว', text: 'สภานักเรียนจะตรวจสอบให้เร็วที่สุด', timer: 1600, showConfirmButton: false })
+    Swal.fire({
+      icon: 'success',
+      title: 'แจ้งแล้ว',
+      text: 'สภานักเรียนจะตรวจสอบให้เร็วที่สุด',
+      timer: 1600,
+      showConfirmButton: false,
+    })
   } catch (e) {
-    Swal.fire({ icon: 'error', title: 'แจ้งไม่สำเร็จ', text: e instanceof Error ? e.message : String(e) })
+    Swal.fire({
+      icon: 'error',
+      title: 'แจ้งไม่สำเร็จ',
+      text: e instanceof Error ? e.message : String(e),
+    })
   } finally {
     acting.value = false
   }
@@ -104,7 +145,8 @@ async function handleHide() {
     cancelButtonText: 'ยกเลิก',
   })
   if (!value || !String(value).trim()) {
-    if (value !== undefined) Swal.fire({ icon: 'warning', title: 'ต้องระบุเหตุผล', text: 'กรุณากรอกเหตุผลที่ซ่อน' })
+    if (value !== undefined)
+      Swal.fire({ icon: 'warning', title: 'ต้องระบุเหตุผล', text: 'กรุณากรอกเหตุผลที่ซ่อน' })
     return
   }
   acting.value = true
@@ -113,7 +155,11 @@ async function handleHide() {
     Swal.fire({ icon: 'success', title: 'ซ่อนคอมเมนต์แล้ว', timer: 1200, showConfirmButton: false })
     emit('refresh')
   } catch (e) {
-    Swal.fire({ icon: 'error', title: 'ซ่อนไม่สำเร็จ', text: e instanceof Error ? e.message : String(e) })
+    Swal.fire({
+      icon: 'error',
+      title: 'ซ่อนไม่สำเร็จ',
+      text: e instanceof Error ? e.message : String(e),
+    })
   } finally {
     acting.value = false
   }
@@ -131,11 +177,23 @@ async function handleHide() {
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sm font-semibold text-stone-800">{{ comment.commenter_name || 'ไม่ระบุชื่อ' }}</span>
+          <span class="text-sm font-semibold text-stone-800">{{
+            comment.commenter_name || 'ไม่ระบุชื่อ'
+          }}</span>
           <span class="text-xs text-ink-3">{{ fmtDayTime(comment.created_at) }}</span>
           <span v-if="comment.is_edited" class="text-[11px] text-ink-3">· แก้ไขแล้ว</span>
         </div>
-        <p class="text-sm text-stone-700 mt-0.5 whitespace-pre-wrap break-words">{{ comment.body }}</p>
+        <p class="text-sm text-stone-700 mt-0.5 whitespace-pre-wrap break-words">
+          {{ comment.body }}
+        </p>
+        <!-- 🖼️ รูปที่แนบมากับคอมเมนต์ (สูงสุด 1) — แตะเพื่อขยาย -->
+        <MediaThumb
+          v-if="comment.image"
+          :image="comment.image"
+          alt="รูปในคอมเมนต์"
+          aspect="aspect-[4/3]"
+          class="mt-2 max-w-[220px]"
+        />
         <!-- action: ตอบกลับ / แจ้ง (ทุกคน ยกเว้นตัวเอง) / ซ่อน (สภา/แอดมิน) -->
         <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0 text-xs">
           <button
@@ -169,30 +227,46 @@ async function handleHide() {
         </div>
 
         <!-- ช่องตอบกลับ -->
-        <div v-if="replying" class="mt-2 flex gap-2">
-          <input
-            v-model="replyBody"
-            type="text"
-            placeholder="พิมพ์คำตอบ..."
-            maxlength="1000"
-            class="flex-1 px-3 py-2 border border-stone-300 rounded-xl text-sm"
-            @keyup.enter="submitReply"
+        <div v-if="replying" class="mt-2 space-y-2">
+          <div class="flex gap-2">
+            <input
+              v-model="replyBody"
+              type="text"
+              placeholder="พิมพ์คำตอบ..."
+              maxlength="1000"
+              class="flex-1 px-3 py-2 border border-stone-300 rounded-xl text-sm"
+              @keyup.enter="submitReply"
+            />
+            <button
+              type="button"
+              :disabled="posting || !replyBody.trim()"
+              @click="submitReply"
+              class="inline-flex items-center px-3.5 min-h-11 py-2 bg-brand text-white rounded-xl text-sm hover:bg-brand-strong disabled:opacity-50"
+            >
+              {{ posting ? '...' : 'ตอบ' }}
+            </button>
+          </div>
+          <!-- 🖼️ แนบรูปกับรีพลาย (ไม่บังคับ · สูงสุด 1) -->
+          <ImagePicker
+            v-model:files="replyFiles"
+            :max-count="DEFAULT_MEDIA_LIMITS.max_per_owner"
+            :size-limit-mb="DEFAULT_MEDIA_LIMITS.size_limit_mb"
+            :disabled="posting"
+            hint="รูปนี้จะถูกมองเห็นโดยผู้ใช้ที่เข้าสู่ระบบทุกคน"
           />
-          <button
-            type="button"
-            :disabled="posting || !replyBody.trim()"
-            @click="submitReply"
-            class="inline-flex items-center px-3.5 min-h-11 py-2 bg-brand text-white rounded-xl text-sm hover:bg-brand-strong disabled:opacity-50"
-          >
-            {{ posting ? '...' : 'ตอบ' }}
-          </button>
         </div>
       </div>
     </div>
 
     <!-- รีพลายซ้อน (recursive — self-reference ด้วยชื่อไฟล์) -->
     <div v-if="comment.replies.length" class="mt-3 space-y-3">
-      <CommentThread v-for="r in comment.replies" :key="r.id" :board-id="boardId" :comment="r" @refresh="emit('refresh')" />
+      <CommentThread
+        v-for="r in comment.replies"
+        :key="r.id"
+        :board-id="boardId"
+        :comment="r"
+        @refresh="emit('refresh')"
+      />
     </div>
   </div>
 </template>

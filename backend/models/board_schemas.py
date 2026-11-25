@@ -11,6 +11,8 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
+from models.media_schemas import MediaImageOut
+
 # หมวดเหตุผลที่แจ้งความไม่เหมาะสมได้ (ตรงกับ piri_board_reports.reason CHECK + service)
 REPORT_REASONS = ("bullying", "profanity", "spam", "privacy", "other")
 
@@ -76,6 +78,8 @@ class BoardCommentOut(BaseModel):
     commenter_name: Optional[str] = None
     commenter_first_name: Optional[str] = None  # ชื่อจริง (avatar ใช้ตัวแรกของชื่อ) — fallback commenter_name
     body: str
+    # 🖼️ รูปที่แนบมาพร้อมคอมเมนต์ (media_images owner_type='board_comment') — None = ไม่มี
+    image: Optional[MediaImageOut] = None
     is_edited: bool = False
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -89,6 +93,8 @@ class BoardSummaryOut(BaseModel):
     title: str
     description: str
     cover_image_url: Optional[str] = None
+    # 🖼️ รูปปกที่อัปเข้าเซิร์ฟเวอร์ (signed URL) — มีค่านี้ให้ใช้ก่อน legacy `cover_image_url`
+    cover_image: Optional[MediaImageOut] = None
     source_issue_id: Optional[int] = None
     author_id: Optional[int] = None
     author_name: Optional[str] = None          # None ถ้า board anonymous (is_anonymous=True)
@@ -107,6 +113,9 @@ class BoardDetailOut(BoardSummaryOut):
     my_vote_choice_id: Optional[int] = None    # board ที่ user โหวตแล้ว (ชี้ choice_id) — ใช้ highlight ปุ่ม
     choices: List[VoteChoiceOut] = []
     comments: List[BoardCommentOut] = []
+    # 🖼️ ผู้ดูคนนี้เปลี่ยน/ลบรูปปกได้ไหม (เจ้าของโพสต์ หรือสภา/แอดมิน) — คำตอบเป็น boolean
+    #    เพื่อไม่ต้องเปิด `author_id` ของบอร์ด anonymous ให้ frontend เทียบเอง
+    cover_editable: bool = False
 
 
 class BoardListOut(BaseModel):

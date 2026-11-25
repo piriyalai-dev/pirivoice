@@ -21,6 +21,11 @@ from core.exceptions import NotFoundError, ForbiddenError, ValidationError, Conf
 
 # 🔔 Notification writer (อยู่ใน transaction เดียวกับข้อมูลหลัก — ลอกแบบ AuditLogger)
 from services.notification_service import notify, _user_display_name
+# 🖼️ รูปปก/รูปในคอมเมนต์ — signed URL ต้องผูกลายเซ็นกับ "ผู้ดู" ⇒ แนบใน service ตอนอ่าน
+from services import media_service
+# 🔐 อำนาจระดับสภา/แอดมิน — ฟังก์ชันเดียวกับที่ policy และ moderation ใช้
+#    (private ใน issue_service แต่ใช้ร่วมกันภายในชั้น service ตามแบบเดิมของโปรเจกต์)
+from services.issue_service import _has_council_authority
 
 # ⚠️ ความลึก reply ที่ปลอดภัย — กัน recursive Pydantic overflow:
 # BoardCommentOut เป็น model ซ้อนตัวเอง — reply chain ~256 ชั้นทำ BoardDetailOut(**detail)
@@ -103,6 +108,8 @@ def _board_to_dict(row) -> dict:
         "title": row["title"],
         "description": row["description"],
         "cover_image_url": row["cover_image_url"],
+        # รูปปกใหม่ (media_images) — เติมทีหลังใน list/detail; None = ยังไม่มี/คนดูไม่มีสิทธิ์
+        "cover_image": None,
         "source_issue_id": row["source_issue_id"],
         "author_id": author_id,
         "author_name": author_name,
@@ -121,6 +128,7 @@ def _board_to_dict(row) -> dict:
 # ============================================================
 async def list_public_boards(
     pool: asyncpg.Pool,
+    user_id: int,
     *,
     board_type: Optional[str] = None,
     q: Optional[str] = None,
@@ -175,8 +183,20 @@ async def list_public_boards(
                 *params
             ) or 0
 
+        # 🖼️ รูปปก — คิวรีเดียวสำหรับทั้งหน้า (กัน N+1) · signed URL ผูกกับผู้ดูคนนี้
+        covers = await media_service.signed_media_map(
+            conn, "board", [r["id"] for r in rows], user_id, kind="cover"
+        )
+
+    items = []
+    for r in rows:
+        item = _board_to_dict(r)
+        imgs = covers.get(r["id"])
+        item["cover_image"] = imgs[0] if imgs else None
+        items.append(item)
+
     return {
-        "items": [_board_to_dict(r) for r in rows],
+        "items": items,
         "total": total,
         "page": offset // limit + 1,
         "page_size": limit,
@@ -214,6 +234,21 @@ async def get_board_detail(pool: asyncpg.Pool, user_id: int, board_id: int) -> d
 
         detail = _board_to_dict(row)
         detail["allow_comments"] = row["allow_comments"]
+        # 🖼️ ปกของโพสต์นี้ (policy: board ที่ hidden ถูกตัดไปแล้วข้างบน)
+        covers = await media_service.signed_media_map(
+            conn, "board", [board_id], user_id, kind="cover"
+        )
+        detail["cover_image"] = (covers.get(board_id) or [None])[0]
+        # 🖼️ ผู้ใช้คนนี้เปลี่ยน/ลบรูปปกได้ไหม — **คำนวณฝั่ง server**
+        # ⚠️ ห้ามให้ frontend เทียบ `author_id === ฉัน` เอง: บอร์ด anonymous ถูกทำให้
+        #    `author_id = None` ไปแล้ว (กัน deanonymize) ⇒ UI จะซ่อนปุ่มจากเจ้าของตัวจริง
+        #    · ที่นี่อ่าน `row["author_id"]` ดิบแล้วตอบเป็น boolean — ไม่เปิดเผยตัวตน
+        #    ⚠️ ใช้กติกาเดียวกับ `BoardPolicy` (เจ้าของโพสต์ หรือมีอำนาจระดับสภา)
+        #       แต่ **ไม่เรียก `assert_can_upload`** เพราะมัน `FOR UPDATE` แถวบอร์ด
+        #       (ล็อกเขียนใน GET = คนดูสองคนแย่งกัน)
+        detail["cover_editable"] = (
+            user_id == row["author_id"] or await _has_council_authority(conn, user_id)
+        )
 
         if row["board_type"] in VOTABLE_BOARD_TYPES:
             choices = await conn.fetch(
@@ -262,7 +297,12 @@ async def get_board_detail(pool: asyncpg.Pool, user_id: int, board_id: int) -> d
                 """,
                 board_id
             )
-            detail["comments"] = _thread_comments(comment_rows)
+            # 🖼️ รูปในคอมเมนต์ — คิวรีเดียวทั้งเธรด แล้วแปะตอนสร้าง tree
+            comment_media = await media_service.signed_media_map(
+                conn, "board_comment", [c["id"] for c in comment_rows], user_id,
+                kind="attachment",
+            )
+            detail["comments"] = _thread_comments(comment_rows, comment_media)
 
         # 👁️ นับ view_count — dedup ต่อ user (กัน F5 ปั่นยอด): user 1 คน นับ 1 ครั้ง
         # ต่อ VIEW_DEDUP_WINDOW ต่อ board ผ่าน piri_board_views (board_id,user_id PK)
@@ -295,7 +335,7 @@ async def get_board_detail(pool: asyncpg.Pool, user_id: int, board_id: int) -> d
     return detail
 
 
-def _thread_comments(rows) -> List[dict]:
+def _thread_comments(rows, media_map: Optional[dict] = None) -> List[dict]:
     """แปลงแถวคอมเมนต์ (เรียงตามเวลา) → tree แบบ threaded:
     คอมเมนต์หลักที่ root, reply ซ้อนใน replies ของ parent (เรียงตามเวลาภายในกลุ่ม)
     - parent ที่ถูก soft delete → ลูกย้ายขึ้นระดับบน (ยังแสดงต่อได้ ไม่หายทั้งต้น)
@@ -316,6 +356,8 @@ def _thread_comments(rows) -> List[dict]:
             "is_edited": r["is_edited"],
             "created_at": r["created_at"],
             "updated_at": r["updated_at"],
+            # 🖼️ รูปที่แนบกับคอมเมนต์นี้ (None = ไม่มี) — map มาจาก get_board_detail
+            "image": (media_map or {}).get(r["id"], [None])[0],
             "replies": [],
         }
         nodes[node["id"]] = node

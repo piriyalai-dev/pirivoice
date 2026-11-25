@@ -58,7 +58,7 @@ async def list_public_boards(
     """📋 feed board สาธารณะ (active เท่านั้น) — ทุกคนที่ล็อกอินเห็นได้ (ไม่ต้องเช็คระดับ)"""
     uid = _ensure_user(user_ctx)
     result = await board_service.list_public_boards(
-        pool, board_type=board_type, q=q, limit=limit, offset=offset
+        pool, uid, board_type=board_type, q=q, limit=limit, offset=offset
     )
     # 🛡️ Audit: เปิด feed (best-effort)
     await audit_service.log_read(pool, uid, "READ_PUBLIC_BOARDS", "piri_board", endpoint="GET /api/boards")

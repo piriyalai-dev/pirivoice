@@ -395,3 +395,148 @@ async def test_upload_requires_auth(client, media_world):
         files=[("files", ("i.jpg", make_image(), "application/octet-stream"))],
     )
     assert res.status_code in (401, 403)
+
+
+# ============================================================
+# 🗂️ board / board_comment — แนบรูปใน payload ของบอร์ด (PR2)
+# ============================================================
+def _make_suggestion(client, user, title=None) -> int:
+    """สร้างข้อเสนอแนะผ่าน API จริง — บอร์ดชนิดเดียวที่ผู้ใช้ทั่วไปสร้างได้"""
+    res = client.post(
+        "/api/boards/suggestions",
+        json={
+            "title": title or f"ข้อเสนอทดสอบ {random.randint(1, 10**6)}",
+            "description": "รายละเอียดสำหรับทดสอบรูปปก",
+            "is_anonymous": False,
+        },
+        headers=auth(user),
+    )
+    assert res.status_code == 201, res.text
+    return res.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_board_cover_in_feed_and_detail(client, media_world):
+    """ปกบอร์ดถูกแนบมาใน feed + detail · คนอื่นอัปให้บอร์ดของเราไม่ได้"""
+    author = media_world["student"]
+    board_id = _make_suggestion(client, author)
+
+    # policy: เจ้าของโพสต์หรือสภาเท่านั้น
+    assert upload(client, media_world["student2"], "board", board_id, [make_image()]).status_code == 403
+    item = upload(client, author, "board", board_id, [make_image()]).json()["items"][0]
+
+    feed = client.get("/api/boards", headers=auth(media_world["student2"]))
+    assert feed.status_code == 200, feed.text
+    row = next((b for b in feed.json()["items"] if b["id"] == board_id), None)
+    assert row is not None, "บอร์ดใหม่ต้องอยู่ในหน้าแรกของ feed"
+    assert row["cover_image"]["id"] == item["id"]
+    # ลายเซ็นผูกกับผู้ดู ⇒ URL ที่ได้จาก feed ของ student2 ต้องเปิดได้
+    assert client.get(row["cover_image"]["url"]).status_code == 200
+
+    detail = client.get(f"/api/boards/{board_id}", headers=auth(media_world["student2"]))
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["cover_image"]["id"] == item["id"]
+
+
+@pytest.mark.asyncio
+async def test_board_cover_replacement_keeps_single_live_row(client, db_pool, media_world):
+    """เปลี่ยนปก = soft-delete ของเดิม + แถวใหม่ ใน transaction เดียว (unique index ไม่เคยเห็น 2 แถว)"""
+    author = media_world["student"]
+    board_id = _make_suggestion(client, author)
+    old = upload(client, author, "board", board_id, [make_image()]).json()["items"][0]
+    new = upload(client, author, "board", board_id, [make_image(color=(200, 20, 20))]).json()["items"][0]
+
+    async with db_pool.acquire() as conn:
+        live = await conn.fetch(
+            """SELECT id, deleted_at FROM media_images
+               WHERE owner_type = 'board' AND owner_id = $1 AND kind = 'cover'""",
+            board_id,
+        )
+    by_id = {str(r["id"]): r["deleted_at"] for r in live}
+    assert len(by_id) == 2
+    assert by_id[old["id"]] is not None
+    assert by_id[new["id"]] is None
+
+    # รูปที่ถูกแทนที่แล้วเสิร์ฟไม่ได้
+    assert client.get(old["url"]).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_board_comment_image_in_detail(client, media_world):
+    """รูปคอมเมนต์ถูกแนบมาที่ node ของคอมเมนต์ใน detail (ไม่รั่วข้ามคอมเมนต์)"""
+    author = media_world["student"]
+    board_id = _make_suggestion(client, author)
+
+    c1 = client.post(
+        f"/api/boards/{board_id}/comments", json={"body": "เห็นด้วย"}, headers=auth(author)
+    )
+    c2 = client.post(
+        f"/api/boards/{board_id}/comments",
+        json={"body": "ไม่แน่ใจ"},
+        headers=auth(media_world["student2"]),
+    )
+    assert c1.status_code == 200 and c2.status_code == 200, (c1.text, c2.text)
+    id1, id2 = c1.json()["id"], c2.json()["id"]
+
+    item = upload(client, author, "board_comment", id1, [make_image()]).json()["items"][0]
+
+    detail = client.get(f"/api/boards/{board_id}", headers=auth(media_world["student2"]))
+    assert detail.status_code == 200, detail.text
+    nodes = {n["id"]: n for n in detail.json()["comments"]}
+    assert nodes[id1]["image"]["id"] == item["id"]
+    assert nodes[id2]["image"] is None
+    assert client.get(nodes[id1]["image"]["thumb_url"]).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_hidden_board_cover_is_not_served(client, media_world):
+    """บอร์ดถูกซ่อน ⇒ รูปปกเสิร์ฟไม่ได้ทันที (policy ตรวจสดทุกครั้ง ไม่พึ่ง FK)"""
+    author = media_world["student"]
+    board_id = _make_suggestion(client, author)
+    item = upload(client, author, "board", board_id, [make_image()]).json()["items"][0]
+    assert client.get(item["url"]).status_code == 200
+
+    hidden = client.post(
+        f"/api/boards/{board_id}/hide",
+        json={"reason": "ทดสอบซ่อน"},
+        headers=auth(media_world["council"]),
+    )
+    assert hidden.status_code == 200, hidden.text
+
+    assert client.get(item["url"]).status_code == 404
+    assert client.get(f"/api/boards/{board_id}", headers=auth(author)).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_cover_editable_flag_follows_policy(client, media_world):
+    """`cover_editable` = เจ้าของโพสต์หรือสภา · คนอื่น False
+
+    ⚠️ บอร์ด anonymous: `author_id` ถูกส่งเป็น null ⇒ frontend เทียบเองไม่ได้
+    ตัว flag นี้จึงต้องคำนวณจาก `author_id` ดิบฝั่ง server
+    """
+    author, other, council = (
+        media_world["student"],
+        media_world["student2"],
+        media_world["council"],
+    )
+    board_id = _make_suggestion(client, author)
+
+    assert client.get(f"/api/boards/{board_id}", headers=auth(author)).json()["cover_editable"] is True
+    assert client.get(f"/api/boards/{board_id}", headers=auth(other)).json()["cover_editable"] is False
+    assert client.get(f"/api/boards/{board_id}", headers=auth(council)).json()["cover_editable"] is True
+
+    # anonymous board — เจ้าของยังจัดการปกได้ แม้ `author_id` จะเป็น null ใน payload
+    anon = client.post(
+        "/api/boards/suggestions",
+        json={
+            "title": f"ข้อเสนอไม่ระบุตัวตน {random.randint(1, 10**6)}",
+            "description": "รายละเอียด",
+            "is_anonymous": True,
+        },
+        headers=auth(author),
+    )
+    assert anon.status_code == 201, anon.text
+    anon_id = anon.json()["id"]
+    detail = client.get(f"/api/boards/{anon_id}", headers=auth(author)).json()
+    assert detail["author_id"] is None
+    assert detail["cover_editable"] is True
