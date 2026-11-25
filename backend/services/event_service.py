@@ -44,7 +44,8 @@ from core.exceptions import NotFoundError, ValidationError
 from core.logger import AuditLogger
 from core.rbac import require_permission_anywhere
 from models.event_schemas import EVENT_CATEGORIES
-from services import notification_service
+# 🖼️ รูปปกกิจกรรม — signed URL ผูกกับผู้ดู (ไม่ใช่ URL ลอย ⇒ ต้องแนบตอนตอบ ไม่ใช่เก็บใน DB)
+from services import media_service, notification_service
 
 # คอลัมน์ที่ยอมให้แก้ผ่าน PATCH — allowlist เพราะชื่อคอลัมน์ถูก interpolate ลง SQL
 #
@@ -211,6 +212,29 @@ def _public_row(row) -> dict:
     return data
 
 
+async def _attach_cover(
+    conn: asyncpg.Connection, items: list[dict], viewer_id: int
+) -> None:
+    """🖼️ แนบรูปปกให้ทุกแถวที่ได้รับ **ในคิวรีเดียว** (กัน N+1) — แก้ `items` ในที่
+
+    ⚠️ ใช้ได้ทุกมุมมอง (จัดการ/นักเรียน) เพราะ `EventPolicy.assert_can_view` ตัดสินสิทธิ์
+       ต่อรูปอยู่แล้ว: published ⇒ ทุกคนที่ล็อกอิน · ยังไม่เผยแพร่ ⇒ ผู้จัดการเท่านั้น
+       ⇒ `EventPublicOut` มี `cover_image` ได้โดยไม่รั่วรูปของฉบับร่าง
+
+    ⚠️ ทุกเส้นทางที่เรียกต้องมี `viewer_id` (ทุก endpoint ของกิจกรรมต้องล็อกอินอยู่แล้ว)
+       — ถ้าวันหน้าเปิด endpoint แบบไม่ล็อกอิน **ห้ามแนบรูป** (ไม่มีคนให้ผูกลายเซ็น)
+       ตามบทเรียนเดียวกับ `public_service.get_announcements`
+    """
+    if not items:
+        return
+    covers = await media_service.signed_media_map(
+        conn, "event", [it["id"] for it in items], viewer_id, kind="cover"
+    )
+    for it in items:
+        imgs = covers.get(it["id"])
+        it["cover_image"] = imgs[0] if imgs else None
+
+
 def _seat_token(event_id: int, registration_id: int, status: str) -> Optional[str]:
     """บัตรเช็คอินของแถวนี้ — `None` สำหรับคนที่ยังไม่ถือที่นั่ง
 
@@ -329,7 +353,9 @@ async def list_events(
             limit=limit,
             offset=offset,
         )
-    result["items"] = [dict(r) for r in result["items"]]
+        result["items"] = [dict(r) for r in result["items"]]
+        # 🖼️ ปก — ผู้จัดการเห็นแม้กิจกรรมที่ยังเป็นร่าง (ดู `EventPolicy.assert_can_view`)
+        await _attach_cover(conn, result["items"], user_id)
     return result
 
 
@@ -352,6 +378,9 @@ async def get_event(pool: asyncpg.Pool, user_id: int, event_id: int) -> dict:
     async with pool.acquire() as conn:
         await require_permission_anywhere(conn, user_id, "MANAGE_EVENTS")
         row = await _fetch_one(conn, event_id)
+        if row:
+            # 🖼️ ปก — แนบข้างใน conn เดียว (ไม่ต้อง acquire รอบที่สอง)
+            await _attach_cover(conn, [row], user_id)
 
     if not row:
         raise NotFoundError("ไม่พบกิจกรรมนี้")
@@ -488,7 +517,9 @@ async def list_public_events(
             limit=limit,
             offset=offset,
         )
-    result["items"] = [_public_row(r) for r in result["items"]]
+        result["items"] = [_public_row(r) for r in result["items"]]
+        # 🖼️ ปก — ทุกแถวที่นี่ published แล้ว ⇒ policy ปล่อยให้ผู้ล็อกอินทุกคนดูรูปได้
+        await _attach_cover(conn, result["items"], user_id)
     return result
 
 
@@ -565,6 +596,10 @@ async def list_closing_soon_events(
             user_id, days, limit,
         )
 
+    # 🖼️ **ไม่แนบรูปปกที่นี่โดยเจตนา** — บล็อกนี้เป็นแถวข้อความกะทัดรัดบนหน้าแรก (ไม่มีที่ให้
+    #    รูป) และ `/api/home/summary` คือ endpoint ที่ถูกเรียกมากที่สุด ⇒ คิวรีเพิ่มอีกใบ
+    #    เพื่อข้อมูลที่ไม่มีใครแสดง = ต้นทุนเปล่าทุกคน · ถ้าจะทำการ์ดรูปที่นี่ ให้แนบพร้อมกัน
+    #    กับการเปลี่ยนหน้าตา (ไม่ใช่แนบรอไว้ก่อน)
     return {"items": [_public_row(r) for r in rows], "total": total or 0}
 
 
@@ -583,9 +618,12 @@ async def get_public_event(pool: asyncpg.Pool, user_id: int, event_id: int) -> d
             """,
             user_id, event_id,
         )
-    if not row:
-        raise NotFoundError("ไม่พบกิจกรรมนี้")
-    return _public_row(row)
+        if not row:
+            raise NotFoundError("ไม่พบกิจกรรมนี้")
+        data = _public_row(row)
+        # 🖼️ ปก — คิวรีนี้กรอง published แล้ว ⇒ policy ปล่อยให้ผู้ล็อกอินทุกคนดูได้
+        await _attach_cover(conn, [data], user_id)
+    return data
 
 
 async def get_my_registration(pool: asyncpg.Pool, user_id: int, event_id: int) -> dict:

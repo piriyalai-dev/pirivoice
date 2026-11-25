@@ -8,6 +8,7 @@ PR1 = core เท่านั้น ⇒ เทสต์ใช้เจ้าข�
 """
 import io
 import random
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
@@ -594,3 +595,85 @@ async def test_announcement_image_stops_serving_after_delete(client, db_pool, me
 
     # policy ตรวจ "ประกาศยังอยู่ไหม" ทุกครั้งที่เสิร์ฟ ⇒ รูปต้องหยุดทันที
     assert client.get(item["url"]).status_code == 404
+
+
+# ============================================================
+# 📅 กิจกรรม — ปกที่อัปเข้าเซิร์ฟเวอร์ (PR4)
+# ============================================================
+def _make_event(client, admin) -> int:
+    """สร้างกิจกรรมผ่าน API (admin = is_admin ⇒ ผ่าน MANAGE_EVENTS) — เกิดเป็น 'draft' เสมอ"""
+    res = client.post(
+        "/api/events",
+        json={
+            "title": f"กิจกรรมมีรูป {random.randint(1, 10**9)}",
+            "event_date": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        },
+        headers=auth(admin),
+    )
+    assert res.status_code == 201, res.text
+    return res.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_event_cover_manage_then_public_after_publish(client, db_pool, media_world):
+    admin = media_world["admin"]
+    student = media_world["student"]
+    event_id = _make_event(client, admin)
+
+    item = upload(client, admin, "event", event_id, [make_image()]).json()["items"][0]
+
+    # 1) หน้าจัดการเห็นรูปทั้งในลิสต์และในหน้ารายละเอียด
+    listing = client.get("/api/events", headers=auth(admin))
+    assert listing.status_code == 200, listing.text
+    row = next(e for e in listing.json()["items"] if e["id"] == event_id)
+    assert row["cover_image"]["thumb_url"] == item["thumb_url"]
+    assert row["cover_image_url"] is None, "ลิงก์ภายนอกแบบเดิมต้องไม่ถูกแต่งขึ้นมา"
+
+    detail = client.get(f"/api/events/{event_id}", headers=auth(admin))
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["cover_image"]["id"] == item["id"]
+
+    # 2) ยังเป็นฉบับร่าง ⇒ นักเรียนไม่เห็นกิจกรรม (และไม่เห็นรูปในลิสต์สาธารณะ)
+    assert client.get(f"/api/events/public/{event_id}", headers=auth(student)).status_code == 404
+    pub = client.get("/api/events/public", headers=auth(student), params={"scope": "all"})
+    assert pub.status_code == 200, pub.text
+    assert all(e["id"] != event_id for e in pub.json()["items"])
+
+    # 3) เผยแพร่แล้ว ⇒ นักเรียนรู้เห็นรูปพร้อม signed URL ที่เสิร์ฟได้จริง
+    #    (เบี่ยงจากแผนเดิมที่คิดว่า /events/public เป็น anon — จริง ๆ ต้องล็อกอิน
+    #     ⇒ มี viewer ให้ผูกลายเซ็นเสมอ · ความปลอดภัยของร่างยังอยู่ที่ EventPolicy)
+    pub_res = client.post(f"/api/events/{event_id}/publish", headers=auth(admin))
+    assert pub_res.status_code == 200, pub_res.text
+
+    pub2 = client.get("/api/events/public", headers=auth(student), params={"scope": "all"})
+    assert pub2.status_code == 200, pub2.text
+    srow = next(e for e in pub2.json()["items"] if e["id"] == event_id)
+    assert srow["cover_image"]["thumb_url"]
+    served = client.get(srow["cover_image"]["thumb_url"])
+    assert served.status_code == 200
+    assert served.headers["content-type"].startswith("image/")
+
+    sdetail = client.get(f"/api/events/public/{event_id}", headers=auth(student))
+    assert sdetail.status_code == 200, sdetail.text
+    assert sdetail.json()["cover_image"]["id"] == item["id"]
+
+
+@pytest.mark.asyncio
+async def test_event_cover_stops_serving_after_event_deleted(client, db_pool, media_world):
+    admin = media_world["admin"]
+    event_id = _make_event(client, admin)
+    item = upload(client, admin, "event", event_id, [make_image()]).json()["items"][0]
+    assert client.get(item["url"]).status_code == 200
+
+    res = client.delete(f"/api/events/{event_id}", headers=auth(admin))
+    assert res.status_code == 200, res.text
+
+    # policy ถาม "กิจกรรมยังอยู่ไหม" ทุกครั้งที่เสิร์ฟ ⇒ ถูกลบ = รูปหยุดทันที (แถวรูปยังอยู่)
+    assert client.get(item["url"]).status_code == 404
+    async with db_pool.acquire() as conn:
+        alive = await conn.fetchval(
+            "SELECT COUNT(*) FROM media_images "
+            "WHERE owner_type = 'event' AND owner_id = $1 AND deleted_at IS NULL",
+            event_id,
+        )
+    assert alive == 1, "รูปต้องยังไม่ถูกลบ — ที่หยุดเพราะ policy ของกิจกรรม ไม่ใช่เพราะแถวหาย"

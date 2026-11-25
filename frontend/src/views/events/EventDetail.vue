@@ -22,6 +22,7 @@ import {
 import type { ApiError } from '@/services/api'
 import { goUnavailable } from '@/router/unavailable'
 import { fmtDateTime, fmtTime } from '@/datetime'
+import { absoluteMediaUrl } from '@/utils/media'
 import QrCode from '@/components/QrCode.vue'
 import AppCard from '@/components/ui/AppCard.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -246,9 +247,16 @@ async function handleCancel() {
   <div v-else-if="event" class="max-w-3xl mx-auto space-y-5">
     <!-- 🔴 ไม่มีปุ่มย้อนที่นี่ — `AppHeader` วาดปุ่ม ← (จาก `meta.headerBack` = `events`) ให้แล้ว (R0.3) -->
 
-    <!-- ปก -->
+    <!-- ปก — รูปใหม่ (`cover_image`) ก่อน · ไม่มีค่อยใช้ลิงก์ภายนอกแบบเดิม -->
     <img
-      v-if="event.cover_image_url"
+      v-if="event.cover_image"
+      :src="absoluteMediaUrl(event.cover_image.url)"
+      :alt="event.title"
+      class="w-full max-h-64 object-cover rounded-2xl border border-stone-200 bg-stone-100"
+      loading="lazy"
+    />
+    <img
+      v-else-if="event.cover_image_url"
       :src="event.cover_image_url"
       :alt="event.title"
       class="w-full max-h-64 object-cover rounded-2xl border border-stone-200 bg-stone-100"

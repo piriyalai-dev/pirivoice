@@ -20,6 +20,8 @@ from typing import List, Literal, Optional, get_args
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from models.media_schemas import MediaImageOut
+
 # ต้องตรงกับ CHECK constraint `chk_events_status` ใน migration 025 / init_db
 EventStatus = Literal["draft", "published", "cancelled"]
 
@@ -243,7 +245,10 @@ class EventOut(BaseModel):
     title: str
     description: Optional[str] = None
     location: Optional[str] = None
+    # 🖼️ `cover_image_url` = ลิงก์ภายนอกแบบเดิม (ยังคืนให้ผู้ที่เคยใช้ — ห้ามตัดข้อมูลเก่า)
+    #    แต่ UI ต้องใช้ `cover_image` (ไฟล์ที่อัปเข้าเซิร์ฟเวอร์) ก่อนเสมอถ้ามี
     cover_image_url: Optional[str] = None
+    cover_image: Optional[MediaImageOut] = None
     event_date: datetime
     registration_deadline: Optional[datetime] = None
     capacity: Optional[int] = None
@@ -272,6 +277,12 @@ class EventPublicOut(BaseModel):
     `my_registration_status` = None เมื่อยังไม่เคยสมัคร (หรือเคยยกเลิกแล้วถูกเขียนสถานะ
     เป็น 'cancelled' ซึ่ง UI ควรแสดงเป็น "ยังไม่ได้สมัคร" ไม่ใช่ป้าย "ยกเลิกแล้ว")
 
+    🖼️ **มี `cover_image` ด้วยทั้งที่ไฟล์นี้พูดว่า "ตาม event_service"** — แผนเดิมเข้าใจว่า
+    `/events/public*` ไม่ต้องล็อกอิน จึงตั้งใจไม่แนบรูป · แต่ความจริงคือ **ทุก endpoint
+    ของกิจกรรมต้องล็อกอิน** (ดูหัวไฟล์ `event_router.py`) ⇒ มี `user_id` ให้ผูกลายเซ็น
+    ทุกครั้ง — ถ้าไม่แนบ นักเรียนจะไม่เห็นปกกิจกรรมที่สภาอัปไว้เลย ซึ่งขัดเจตนาของฟีเจอร์
+    · ความปลอดภัยของรูปฉบับร่างยังอยู่ที่ `EventPolicy.assert_can_view` (ไม่ใช่ที่การซ่อนฟิลด์)
+
     `is_registration_open` คำนวณฝั่ง server **เสมอ** — ห้ามให้ frontend เทียบเวลาเอง
     เพราะนาฬิกาเครื่องผู้ใช้เพี้ยนได้ และกฎ "ปิดเมื่อ event_date ผ่านไปแล้ว" เป็น
     กติกาของระบบ ไม่ใช่การแสดงผล
@@ -281,6 +292,8 @@ class EventPublicOut(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     cover_image_url: Optional[str] = None
+    # 🖼️ รูปปกที่อัปเข้าเซิร์ฟเวอร์ (signed URL) — มีค่านี้ให้ใช้ก่อน legacy `cover_image_url`
+    cover_image: Optional[MediaImageOut] = None
     event_date: datetime
     registration_deadline: Optional[datetime] = None
     capacity: Optional[int] = None

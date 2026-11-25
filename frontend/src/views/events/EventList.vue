@@ -12,6 +12,8 @@ import { useAuthStore } from '@/stores/auth'
 //      `src/datetime.ts` ใช้ `Asia/Bangkok` + พ.ศ. ชุดเดียวกัน และมีเทสต์ 17 เคสคุมอยู่)
 import { fmtDateTime } from '@/datetime'
 import { listPublicEvents } from '@/services/event'
+// 🖼️ รูปปกที่อัปเข้าเซิร์ฟเวอร์ — path ต้องผ่าน `absoluteMediaUrl()` (ลายเซ็นหมดอายุ 15 นาที)
+import { absoluteMediaUrl } from '@/utils/media'
 import {
   CATEGORY_LABELS,
   EVENT_CATEGORIES,
@@ -235,8 +237,18 @@ function isFull(e: PublicEvent): boolean {
           :to="{ name: 'event-detail', params: { id: e.id } }"
           class="flex h-full flex-col rounded-card focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
         >
+          <!-- 🖼️ ปก — รูปใหม่ (`cover_image`) ก่อน · ถ้าไม่มีค่อยใช้ลิงก์ภายนอกแบบเดิม
+               ⚠️ ใช้ `<img>` ตรง ๆ ไม่ใช่ `MediaThumb` — การ์ดทั้งใบเป็น `<a>` (ปุ่มซ้อนลิงก์ไม่ได้)
+               ⚠️ `cover_image` เป็น Optional ใน type ⇒ อ่านด้วย `?.` ไม่ใช่ `!` -->
           <img
-            v-if="e.cover_image_url"
+            v-if="e.cover_image"
+            :src="absoluteMediaUrl(e.cover_image.thumb_url)"
+            :alt="e.title"
+            class="h-32 w-full rounded-t-card bg-canvas object-cover"
+            loading="lazy"
+          />
+          <img
+            v-else-if="e.cover_image_url"
             :src="e.cover_image_url"
             :alt="e.title"
             class="h-32 w-full rounded-t-card bg-canvas object-cover"
