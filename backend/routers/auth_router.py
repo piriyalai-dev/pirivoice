@@ -6,6 +6,8 @@ from core.exceptions import ForbiddenError, NotFoundError, ConflictError, Valida
 from models.auth_schemas import LoginRequest, LoginResponse, UserOut, ChangePasswordRequest
 from services import auth_service
 from services import audit_service
+# 🖼️ รูปโปรไฟล์ — เซ็นให้ผู้ดู = เจ้าของแถวเสมอ (ทั้ง login และ /me คือผู้ใช้คนนั้น)
+from services import media_service
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -24,10 +26,12 @@ async def login(req: LoginRequest, pool: asyncpg.Pool = Depends(get_db_pool)):
 
     roles = await auth_service.get_user_roles(pool, user_id)
     token = auth_service.create_access_token(user_id)
+    # 🖼️ avatar: ผู้ดู = เจ้าของ (login ตอบเฉพาะตัวผู้ใช้เอง) — ไม่มีรูป = None
+    avatar = await media_service.get_avatar_for_viewer(pool, user_id, user_id)
 
     return LoginResponse(
         access_token=token,
-        user=UserOut(**auth_service.make_user_out(user, roles)),
+        user=UserOut(**auth_service.make_user_out(user, roles, avatar)),
     )
 
 
@@ -45,10 +49,14 @@ async def get_me(
         raise HTTPException(status_code=404, detail="ไม่พบผู้ใช้")
 
     roles = await auth_service.get_user_roles(pool, user_ctx["user_id"])
+    # 🖼️ avatar: ผู้ดู = เจ้าของ — URL ใหม่ทุกครั้งที่ refresh (ลายเซ็นอายุ 15 นาที)
+    avatar = await media_service.get_avatar_for_viewer(
+        pool, user_ctx["user_id"], user_ctx["user_id"]
+    )
     # 🛡️ Audit: ดูข้อมูลตัวเอง (refresh session — best-effort)
     await audit_service.log_read(pool, user_ctx["user_id"], "READ_ME", "user",
                                  entity_id=user_ctx["user_id"], endpoint="GET /api/auth/me")
-    return UserOut(**auth_service.make_user_out(user, roles))
+    return UserOut(**auth_service.make_user_out(user, roles, avatar))
 
 
 @router.post("/change-password", response_model=dict)

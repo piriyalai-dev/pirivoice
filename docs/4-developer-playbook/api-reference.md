@@ -54,6 +54,10 @@
 | GET | `/api/auth/me` | ล็อกอิน | — | `UserOut` |
 | POST | `/api/auth/change-password` | ล็อกอิน | `ChangePasswordRequest` (`old_password`, `new_password`) | `{"status":"ok","message":"เปลี่ยนรหัสผ่านสำเร็จ"}` |
 
+- 🖼️ `UserOut` (ทั้ง login และ `/me`) มี `avatar` — รูปโปรไฟล์จาก `media_images` แบบ signed URL
+  **ผูกกับผู้ดู = เจ้าของเสมอ** · อายุ 15 นาที ⇒ client ต้อง refresh ด้วย `/me` ไม่ใช่เก็บ URL ข้ามวัน
+  และควรมี fallback เป็นตัวอักษรย่อเมื่อ `<img>` โหลดไม่ขึ้น
+
 ### เรื่อง · `/api/issues`
 
 | Method | Path | เงื่อนไข | คำขอ | คำตอบ |
@@ -123,6 +127,9 @@
 |---|---|---|---|---|
 | GET | `/api/students/me/profile` | ล็อกอิน | — | `MyProfileOut` |
 | PATCH | `/api/students/me/profile` | ล็อกอิน | `UpdateProfileRequest` | `MyProfileOut` |
+
+- 🖼️ `MyProfileOut.avatar` — เหมือน `UserOut.avatar` (signed ให้เจ้าของ) · การอัป/ลบรูปทำที่
+  `/api/media/user/{own_user_id}` แยกจาก PATCH โปรไฟล์ (รูปอัปแล้วมีผลทันที ไม่รอ "บันทึก")
 | GET | `/api/rooms` | `MANAGE_STUDENTS` | — | `list[RoomOut]` |
 | GET | `/api/students` | `MANAGE_STUDENTS` | query: ปี ห้อง ตำแหน่ง คำค้น | `list[StudentOut]` |
 | POST | `/api/students` | `MANAGE_STUDENTS` | `StudentCreateRequest` | dict (201) |

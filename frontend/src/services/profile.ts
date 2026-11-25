@@ -1,4 +1,5 @@
 import api from './api';
+import type { MediaImage } from '@/types/media';
 
 // 👤 My Profile API
 
@@ -21,6 +22,8 @@ export interface MyProfile {
   full_name: string | null;
   phone_number: string | null;
   email: string | null;
+  /** 🖼️ รูปโปรไฟล์ (signed URL ผูกกับเจ้าของ) — null = ยังไม่มี ใช้ตัวอักษรย่อ */
+  avatar: MediaImage | null;
 }
 
 /**

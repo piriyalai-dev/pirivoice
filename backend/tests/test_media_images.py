@@ -677,3 +677,58 @@ async def test_event_cover_stops_serving_after_event_deleted(client, db_pool, me
             event_id,
         )
     assert alive == 1, "รูปต้องยังไม่ถูกลบ — ที่หยุดเพราะ policy ของกิจกรรม ไม่ใช่เพราะแถวหาย"
+
+
+# ============================================================
+# 👤 avatar — แนบไปกับ /auth/me และ /students/me/profile (PR5)
+# ============================================================
+@pytest.mark.asyncio
+async def test_avatar_surfaces_in_auth_me_and_my_profile(client, media_world):
+    me = media_world["student"]
+    item = upload(client, me, "user", me["user_id"], [make_image()]).json()["items"][0]
+
+    # 1) /auth/me — sidebar/header ใช้ตัวนี้ ⇒ ต้องมี avatar พร้อม URL ที่เสิร์ฟได้
+    me_res = client.get("/api/auth/me", headers=auth(me))
+    assert me_res.status_code == 200, me_res.text
+    av = me_res.json()["avatar"]
+    assert av is not None and av["id"] == item["id"]
+    assert av["kind"] == "avatar"
+    served = client.get(av["thumb_url"])
+    assert served.status_code == 200
+    assert served.headers["content-type"].startswith("image/")
+
+    # 2) โปรไฟล์ตัวเอง — หน้า Profile ใช้ค่านี้
+    prof = client.get("/api/students/me/profile", headers=auth(me))
+    assert prof.status_code == 200, prof.text
+    assert prof.json()["avatar"]["id"] == item["id"]
+
+    # 3) คนอื่นที่ยังไม่มีรูป ⇒ avatar = None (ไม่ใช่รูปของใครอื่นหลุดมา)
+    other = client.get("/api/auth/me", headers=auth(media_world["student2"]))
+    assert other.status_code == 200, other.text
+    assert other.json()["avatar"] is None
+
+    # 4) ลบรูปแล้ว ⇒ ทั้งสอง endpoint กลับเป็น None ทันที
+    assert client.delete(
+        f"/api/media/user/{me['user_id']}/{item['id']}", headers=auth(me)
+    ).status_code == 200
+    assert client.get("/api/auth/me", headers=auth(me)).json()["avatar"] is None
+    assert client.get("/api/students/me/profile", headers=auth(me)).json()["avatar"] is None
+
+
+@pytest.mark.asyncio
+async def test_avatar_url_signature_binds_viewer(client, media_world):
+    """URL เซ็นให้ผู้ดู A — แก้ `viewer` เป็นคนอื่นแล้วต้อง 403
+
+    ⚠️ URL ที่เซ็นแล้วเป็น **bearer** (ใครถือก็เปิดได้จนหมดอายุ) — ตัวที่ลายเซ็นกันคือ
+       "สับเปลี่ยนผู้ดู" ซึ่งจะเปลี่ยนผลของ `assert_can_view` เป็นสิทธิ์ของคนอื่น
+    """
+    me = media_world["student"]
+    upload(client, me, "user", me["user_id"], [make_image()])
+    av = client.get("/api/auth/me", headers=auth(me)).json()["avatar"]
+    assert av is not None
+
+    forged = av["url"].replace(
+        f"viewer={me['user_id']}", f"viewer={me['user_id'] + 1}"
+    )
+    assert forged != av["url"], "URL ต้องมีพารามิเตอร์ viewer ให้ทดสอบ"
+    assert client.get(forged).status_code == 403

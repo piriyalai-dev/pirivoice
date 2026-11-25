@@ -1,6 +1,8 @@
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
+from models.media_schemas import MediaImageOut
+
 
 # ===================== Request =====================
 class LoginRequest(BaseModel):
@@ -41,6 +43,10 @@ class UserOut(BaseModel):
     is_admin: bool = False
     permissions: List[str] = []
     must_change_password: bool = False  # บัญชี seed: บังคับเปลี่ยนรหัสครั้งแรก
+    # 🖼️ รูปโปรไฟล์ที่อัปเข้าเซิร์ฟเวอร์ — signed URL **ผูกกับผู้ดู = เจ้าของเสมอ**
+    #    (ทุกทางที่สร้าง UserOut คือ /auth/login กับ /auth/me ⇒ ผู้ดู = ผู้ใช้แถวนั้น)
+    #    ⚠️ URL หมดอายุ 15 นาที — client ต้อง refresh ด้วย /auth/me ไม่ใช่เก็บข้ามวัน
+    avatar: Optional[MediaImageOut] = None
     # ข้อมูลตำแหน่ง (อาจมีได้หลายห้อง แต่ใช้ห้องหลักก่อน)
     roles: List[UserRoleInfo] = []
 

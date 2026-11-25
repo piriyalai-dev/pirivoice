@@ -6,6 +6,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { avatarCharOf } from '@/utils/avatar'
+import { absoluteMediaUrl } from '@/utils/media'
 import { ROLE_LABELS } from '@/constants/roles'
 
 export function useIdentity() {
@@ -17,6 +18,14 @@ export function useIdentity() {
   const avatarChar = computed(() =>
     avatarCharOf(authStore.user?.first_name || authStore.displayName),
   )
+
+  // 🖼️ รูปโปรไฟล์จริง (ถ้าอัปไว้) — signed URL อายุ 15 นาที ⇒ ต้องผ่าน absoluteMediaUrl()
+  //    ⚠️ อาจหมดอายุระหว่างเปิดแอปค้าง ⇒ component ที่แสดงต้อง fallback เป็น avatarChar
+  //       เมื่อ `<img>` error (ทุกจุดใช้ `@error` ตั้ง flag ของตัวเอง)
+  const avatarUrl = computed(() => {
+    const av = authStore.user?.avatar
+    return av ? absoluteMediaUrl(av.thumb_url) : null
+  })
 
   const roleLabel = computed(() => {
     const first = authStore.roles[0]
@@ -33,5 +42,5 @@ export function useIdentity() {
     return roleLabel.value
   })
 
-  return { displayName, avatarChar, roleLabel, roleLine }
+  return { displayName, avatarChar, avatarUrl, roleLabel, roleLine }
 }

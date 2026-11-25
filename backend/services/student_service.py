@@ -5,6 +5,7 @@ from typing import Optional
 from core.exceptions import NotFoundError, ValidationError, ConflictError
 from core.rbac import get_role_permissions, get_role_is_admin
 from services import auth_service
+from services import media_service
 # 🌟 ต้องรู้ "ปีปัจจุบัน" เพื่อกรองรายชื่อ (migration 027) — `year_service` พึ่งแค่ `core.*`
 #    ⇒ ไม่เกิด import วน (ตรวจแล้ว: ไม่มี service ไหนที่ year_service import กลับ)
 from services import year_service
@@ -536,10 +537,14 @@ async def get_my_profile(pool: asyncpg.Pool, user_id: int) -> dict:
             """,
             user_id
         )
+        # 🖼️ รูปโปรไฟล์ — คิวรีใน conn เดียว · ผู้ดู = เจ้าของ (โปรไฟล์ "ของฉัน") เสมอ
+        avatar = await media_service.get_avatar(conn, user_id, user_id) if row else None
     if not row:
         raise NotFoundError("ไม่พบโปรไฟล์ของคุณ — กรุณาติดต่อผู้ดูแล")
 
-    return dict(row)
+    data = dict(row)
+    data["avatar"] = avatar
+    return data
 
 
 async def update_my_profile(pool: asyncpg.Pool, user_id: int, *, prefix=None, first_name=None, last_name=None, nickname=None, phone_number=None, email=None) -> None:

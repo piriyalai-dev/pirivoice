@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppGroupHeader from '@/components/layout/AppGroupHeader.vue'
 import AppNavRow from '@/components/layout/AppNavRow.vue'
@@ -18,6 +19,13 @@ import { useIdentity } from '@/composables/useIdentity'
  */
 const nav = useNavItems()
 const identity = useIdentity()
+
+// 🖼️ signed URL อายุ 15 นาที — ถ้าโหลดรูปไม่ขึ้น (หมดอายุ/อัปใหม่ระหว่างเปิดแอป)
+//    ต้องถอยไปใช้ตัวอักษรย่อแทนรูปแตก · reset เมื่อ URL เปลี่ยน (login/refresh)
+const avatarBroken = ref(false)
+watch(identity.avatarUrl, () => {
+  avatarBroken.value = false
+})
 
 function onAction(key: string): void {
   if (key === 'logout') nav.logout()
@@ -67,10 +75,17 @@ function onAction(key: string): void {
       <div class="flex items-center gap-3">
         <RouterLink
           to="/app/profile"
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-white"
+          class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand text-sm font-bold text-white"
           :aria-label="`โปรไฟล์ของ ${identity.displayName.value}`"
         >
-          {{ identity.avatarChar.value }}
+          <img
+            v-if="identity.avatarUrl.value && !avatarBroken"
+            :src="identity.avatarUrl.value"
+            alt=""
+            class="h-full w-full object-cover"
+            @error="avatarBroken = true"
+          />
+          <template v-else>{{ identity.avatarChar.value }}</template>
         </RouterLink>
         <RouterLink to="/app/profile" class="min-w-0 flex-1">
           <p class="truncate text-sm font-bold text-ink-1">{{ identity.displayName.value }}</p>

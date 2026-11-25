@@ -1,6 +1,6 @@
 <!-- eslint-disable vue/multi-word-component-names -- 'More' = หน้า "เพิ่มเติม" ตามชื่อแท็บที่ผู้ใช้เห็น -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AppGroupHeader from '@/components/layout/AppGroupHeader.vue'
 import AppNavRow from '@/components/layout/AppNavRow.vue'
 import { useNavItems } from '@/composables/useNavItems'
@@ -23,6 +23,12 @@ import type { NavItem } from '@/constants/nav'
  */
 const nav = useNavItems()
 const identity = useIdentity()
+
+// 🖼️ รูปโปรไฟล์ — signed URL อายุ 15 นาที ⇒ โหลดไม่ขึ้นให้ถอยไปใช้ตัวอักษรย่อ (ไม่ปล่อยรูปแตก)
+const avatarBroken = ref(false)
+watch(identity.avatarUrl, () => {
+  avatarBroken.value = false
+})
 
 /** แถวที่เป็น *การกระทำ* (ออกจากระบบ) แยกออกจากลิสต์ แล้วไปอยู่โซนอันตรายล่างสุด */
 function isAction(item: NavItem): boolean {
@@ -56,10 +62,17 @@ function onDanger(item: NavItem): void {
       class="flex items-center gap-3 rounded-card border border-line bg-surface p-4 transition-colors hover:border-ink-3/40"
     >
       <span
-        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-white"
+        class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand text-base font-bold text-white"
         aria-hidden="true"
       >
-        {{ identity.avatarChar.value }}
+        <img
+          v-if="identity.avatarUrl.value && !avatarBroken"
+          :src="identity.avatarUrl.value"
+          alt=""
+          class="h-full w-full object-cover"
+          @error="avatarBroken = true"
+        />
+        <template v-else>{{ identity.avatarChar.value }}</template>
       </span>
       <span class="min-w-0 flex-1">
         <span class="block truncate text-base font-bold text-ink-1">

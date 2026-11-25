@@ -3533,3 +3533,24 @@
   - ทางกลับกัน: `list_closing_soon_events` ที่ไม่มีที่แสดงรูป **ไม่แนบ** แม้จะแนบได้ —
     ต้นทุนคิวรีบน `/api/home/summary` จ่ายทุกครั้งที่เปิดหน้าแรก
 - **Date Added:** 2026-11-25
+
+### 🖼️ signed URL ที่ฝังใน state ผู้ใช้ต้องมีทางถอย — และ mutation ไม่ล้าง cache ข้ามโมดูล
+
+- **Context/Problem:** เพิ่ม avatar ให้โปรไฟล์ โดยส่ง `UserOut.avatar` เป็น signed URL
+  (อายุ 15 นาที) ที่ auth store persist ลง localStorage
+- **Root Cause / กับดักที่เจอจริง:**
+  - URL หมดอายุได้ระหว่างที่ผู้ใช้เปิดแอปค้าง ⇒ `<img>` พังเป็นรูปแตกแทนที่จะแสดง
+    ตัวอักษรย่อ ซึ่งดูเหมือนข้อมูลหาย
+  - `invalidateForMutation()` ของ `services/queryCache.ts` จัดกลุ่มด้วย **segment แรก
+    ของ path** (`/api/media/...` → resource `media`) ⇒ อัปรูปที่ `/api/media/user/{id}`
+    **ไม่ล้าง** cache ของ `/api/students/me/profile` (resource `students`) หรือ
+    `/api/auth/me` (resource `auth`) — หน้าที่เปิดค้างจะเห็นข้อมูลเก่าจนกว่าจะ revalidate
+- **Correct Pattern/Solution:**
+  - ทุกจุดที่แสดง avatar จาก signed URL ต้องมี `@error` → ถอยไปใช้ตัวอักษรย่อ
+    (`avatarCharOf`) และ reset flag เมื่อ URL เปลี่ยน (`watch`)
+  - `fetchMe()` ตั้ง `noCache: true` อยู่แล้ว ⇒ หลังอัป/ลบรูปให้เรียก `authStore.loadMe()`
+    เพื่อให้แถบข้างได้ URL ใหม่ทันที — อย่าหวังพึ่ง cache invalidation
+  - ข้อเท็จจริงที่ต้องรู้: signature **ผูกกับ `viewer`** แต่ URL ที่เซ็นแล้วเป็น **bearer**
+    (ใครถือก็เปิดได้จนหมดอายุ) — สิ่งที่ลายเซ็นกันคือการสับเปลี่ยน `viewer`
+    ⇒ เทสต์ที่ถูกต้องคือ "แก้ `viewer` แล้วต้อง 403" ไม่ใช่ "คนอื่นเปิด URL ต้อง 403"
+- **Date Added:** 2026-11-25

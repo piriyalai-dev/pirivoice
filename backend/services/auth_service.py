@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 import bcrypt
 import asyncpg
 from datetime import datetime, timedelta, timezone
@@ -310,8 +311,13 @@ async def register_user(
             return user_id
 
 
-def make_user_out(user_record, roles: list) -> dict:
-    """แปลง user + roles ให้เป็น response shape (UserOut)"""
+def make_user_out(user_record, roles: list, avatar: Optional[dict] = None) -> dict:
+    """แปลง user + roles ให้เป็น response shape (UserOut)
+
+    🖼️ `avatar` — รูปโปรไฟล์ที่ผู้เรียกเตรียมมา (signed ให้ผู้ดูคนเดียวกันแล้ว)
+    ⚠️ ไม่ดึงรูปในฟังก์ชันนี้เพื่อไม่ให้ฟังก์ชัน pure ต้องมี conn — router ที่มี pool
+       เรียก `media_service.get_avatar_for_viewer()` เองแล้วส่งเข้ามา
+    """
     # หา is_admin จาก roles ไหนก็ได้
     is_admin = any(r.get("is_admin") for r in roles)
     # รวม permissions ทั้งหมด
@@ -327,6 +333,7 @@ def make_user_out(user_record, roles: list) -> dict:
         "is_admin": is_admin,
         "permissions": permissions,
         "must_change_password": bool(user_record.get("must_change_password")),
+        "avatar": avatar,
         "roles": [
             {
                 "role": r["role"],
