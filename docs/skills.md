@@ -3495,3 +3495,22 @@
     จึงต้องรับ `user_id` เข้า service (อย่าเซ็นด้วย id ของเจ้าของเนื้อหา)
   - URL ที่มีลายเซ็น 15 นาที: service ต้อง `noCache: true` และห้ามเก็บลง store ข้ามหน้า
 - **Date Added:** 2026-11-25
+
+### 📣 endpoint เดียวสองผู้ใช้ — "ข้อมูลที่ขึ้นกับผู้ดู" ต้องเป็น argument ที่ default = ไม่ให้
+
+- **Context/Problem:** เปิดให้ประกาศมีรูป — `/api/v1/public/announcements` ถูกเรียกจาก
+  Landing (ไม่ล็อกอิน) และข้อมูลชุดเดียวกันถูกใช้บน Home (ล็อกอิน) ผ่าน `/api/home/summary`
+- **Root Cause / กับดักที่เจอจริง:**
+  - signed URL ของ `media_images` **ผูกกับผู้ดู** ⇒ ถ้า service ไม่รู้ว่าใครกำลังดู
+    จะเซ็น URL ให้ใครก็ไม่ได้ · แต่ Landing ไม่มีตัวตนผู้ดูเลย
+  - ถ้าแก้ `get_announcements(pool)` เป็น `get_announcements(pool, viewer_id)` แบบ required
+    ผู้เรียกเดิมทุกจุดจะพังทันที (รวมเทสต์) และอาจมีคน "แก้ให้ผ่าน" ด้วยการส่ง id อะไรก็ได้
+- **Correct Pattern/Solution:**
+  - signature = `get_announcements(pool, viewer_id: Optional[int] = None)`
+    · `None` → **ไม่แนบรูปเลย** (ไม่ใช่แนบ URL ที่เซ็นให้ใครสักคน)
+    · มีค่า → แนบด้วย `signed_media_map(conn, 'announcement', ids, viewer_id, kind='attachment')`
+  - ทิศทางของ default = ทิศทางของความปลอดภัย: default ต้องเป็น "ไม่ให้ข้อมูล"
+    และผู้เรียกที่ล็อกอินต้องส่ง `user_id` เองอย่างชัดเจน
+  - `_fetch_one(conn, id, viewer_id=None)` ใช้ pattern เดียวกัน — mutation ทุกตัวส่ง
+    `user_id` ที่มีอยู่ในมือแล้ว เพื่อให้ response มีรูปเหมือน list
+- **Date Added:** 2026-11-25

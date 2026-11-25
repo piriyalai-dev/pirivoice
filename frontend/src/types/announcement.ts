@@ -1,5 +1,7 @@
 // ประเภทข้อมูลประกาศ (Announcement) — หน้า Landing Page + หน้าจัดการ
 //
+import type { MediaImage } from './media'
+
 // 🎯 ที่นี่เป็น "แหล่งความจริงเดียว" ของ AnnouncementPriority
 //    (services/public.ts import ไปใช้ต่อ — ห้ามประกาศซ้ำที่อื่น ไม่งั้นเพิ่มระดับใหม่แล้วจะลืมที่ใดที่หนึ่ง)
 
@@ -19,6 +21,12 @@ export interface PublicAnnouncement {
   message: string
   priority: AnnouncementPriority
   link?: string | null
+  /**
+   * 🖼️ รูปประกาศ — มีค่าเฉพาะเมื่อโหลดผ่าน endpoint ที่รู้ว่าใครกำลังดู (`/api/home/summary`)
+   * Landing (`/api/v1/public/announcements` ที่ไม่ล็อกอิน) ส่ง `null` เสมอ
+   * ⚠️ URL มีลายเซ็นอายุ 15 นาที ⇒ ห้ามแคช/เก็บข้ามหน้า
+   */
+  image?: MediaImage | null
 }
 
 /**
@@ -45,6 +53,8 @@ export interface Announcement {
   updated_by: number | null
   created_by_name: string | null
   updated_by_name: string | null
+  /** 🖼️ รูปที่แนบกับประกาศ (สูงสุด 1) — null = ไม่มี */
+  image?: MediaImage | null
 }
 
 export interface AnnouncementCreate {

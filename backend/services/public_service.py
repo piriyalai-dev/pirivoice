@@ -7,6 +7,9 @@ from typing import Optional
 
 import asyncpg
 
+# 🖼️ รูปประกาศ — แนบเฉพาะเมื่อรู้ว่า "ใครกำลังดู" (ลายเซ็น URL ผูกกับผู้ดู)
+from services import media_service
+
 # ── แมป priority → impact_score (ระดับผลกระทบ 1–10) ──
 _PRIORITY_IMPACT = {"low": 3, "normal": 5, "high": 7, "urgent": 9}
 
@@ -200,9 +203,15 @@ async def get_resolved_cases(pool: asyncpg.Pool, limit: int) -> list[dict]:
         return out
 
 
-async def get_announcements(pool: asyncpg.Pool) -> list[dict]:
+async def get_announcements(
+    pool: asyncpg.Pool, viewer_id: Optional[int] = None
+) -> list[dict]:
     """
     ประกาศสาธารณะ — เรียง urgent/high มาก่อน
+
+    🖼️ `viewer_id` = ผู้ดูที่ล็อกอิน (มาจาก `/api/home`) ⇒ แนบรูปพร้อม URL ที่เซ็นให้ผู้ดูคนนั้น
+       `viewer_id=None` = ผู้ไม่มีตัวตน (`/api/v1/public/announcements` ที่ Landing เรียก)
+       ⇒ **ไม่แนบรูป** ตามข้อตัดสินใจ "รูปเฉพาะผู้ที่ล็อกอินเห็น" — Landing ยังเป็นข้อความล้วน
 
     ⚠️ **กรองเองโดยไม่ผ่าน `_STATUS_CONDITIONS`** (dict นั้นอยู่ใน announcement_service
        ซึ่งเป็นฝั่ง admin) ⇒ ถ้าเพิ่ม/แก้สถานะใหม่ ต้องมาเติมเงื่อนไขที่นี่ด้วยเสมอ
@@ -227,4 +236,15 @@ async def get_announcements(pool: asyncpg.Pool) -> list[dict]:
                 created_at DESC
             """
         )
-        return [dict(r) for r in rows]
+        items = [dict(r) for r in rows]
+        if viewer_id is None:
+            return items
+
+        # 🖼️ รูปประกาศ — คิวรีเดียวทั้งชุด แล้วแปะต่อแถว
+        images = await media_service.signed_media_map(
+            conn, "announcement", [r["id"] for r in rows], viewer_id, kind="attachment"
+        )
+        for it in items:
+            imgs = images.get(it["id"])
+            it["image"] = imgs[0] if imgs else None
+        return items

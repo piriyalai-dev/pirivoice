@@ -540,3 +540,57 @@ async def test_cover_editable_flag_follows_policy(client, media_world):
     detail = client.get(f"/api/boards/{anon_id}", headers=auth(author)).json()
     assert detail["author_id"] is None
     assert detail["cover_editable"] is True
+
+
+# ============================================================
+# 📣 announcement — รูปใน list/admin + Home แต่ *ไม่* ทาง public
+# ============================================================
+@pytest.mark.asyncio
+async def test_announcement_image_admin_list_home_and_public_gate(client, db_pool, media_world):
+    admin = media_world["admin"]
+    created = client.post(
+        "/api/announcements",
+        json={"message": f"ประกาศมีรูป {random.randint(1, 10**9)}", "priority": "normal"},
+        headers=auth(admin),
+    )
+    assert created.status_code == 201, created.text
+    ann_id = created.json()["id"]
+
+    item = upload(client, admin, "announcement", ann_id, [make_image()]).json()["items"][0]
+
+    # 1) หน้า admin เห็นรูปของแถวนั้น
+    listing = client.get("/api/announcements", headers=auth(admin))
+    assert listing.status_code == 200, listing.text
+    row = next(i for i in listing.json()["items"] if i["id"] == ann_id)
+    assert row["image"]["thumb_url"] == item["thumb_url"]
+
+    # 2) ผู้ใช้ที่ล็อกอินเห็นรูปบน Home (/api/home/summary)
+    home = client.get("/api/home/summary", headers=auth(media_world["student"]))
+    assert home.status_code == 200, home.text
+    hrow = next(a for a in home.json()["announcements"] if a["id"] == ann_id)
+    assert hrow["image"]["url"], "Home ต้องแนบรูปให้ผู้ที่ล็อกอิน"
+
+    # 3) endpoint public (ไม่ล็อกอิน) **ห้าม** มีรูป — Landing ยังเป็นข้อความล้วน
+    pub = client.get("/api/v1/public/announcements")
+    assert pub.status_code == 200, pub.text
+    prow = next(a for a in pub.json() if a["id"] == ann_id)
+    assert prow["image"] is None
+
+    # 4) signed URL ยังเสิร์ฟได้จริง
+    served = client.get(item["thumb_url"])
+    assert served.status_code == 200
+    assert served.headers["content-type"].startswith("image/")
+
+
+@pytest.mark.asyncio
+async def test_announcement_image_stops_serving_after_delete(client, db_pool, media_world):
+    admin = media_world["admin"]
+    ann_id = await _make_announcement(db_pool)
+    item = upload(client, admin, "announcement", ann_id, [make_image()]).json()["items"][0]
+    assert client.get(item["url"]).status_code == 200
+
+    res = client.delete(f"/api/announcements/{ann_id}", headers=auth(admin))
+    assert res.status_code == 200, res.text
+
+    # policy ตรวจ "ประกาศยังอยู่ไหม" ทุกครั้งที่เสิร์ฟ ⇒ รูปต้องหยุดทันที
+    assert client.get(item["url"]).status_code == 404

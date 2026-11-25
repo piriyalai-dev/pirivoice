@@ -36,6 +36,8 @@ from core.exceptions import NotFoundError, ValidationError
 from core.logger import AuditLogger
 from core.rbac import require_permission_anywhere
 from services import notification_service
+# 🖼️ รูปประกาศ — signed URL ผูกผู้ดู ⇒ แนบใน service ตอนอ่าน (เหมือนบอร์ด)
+from services import media_service
 
 # คอลัมน์ที่ยอมให้แก้ผ่าน PATCH — allowlist เพราะชื่อคอลัมน์ถูก interpolate ลง SQL
 _EDITABLE_COLUMNS = ("message", "priority", "link")
@@ -79,13 +81,29 @@ _ORDER_BY = """
 """
 
 
-async def _fetch_one(conn: asyncpg.Connection, announcement_id: int) -> dict:
-    """อ่านประกาศ 1 แถว (พร้อมชื่อผู้ประกาศ)"""
+async def _fetch_one(
+    conn: asyncpg.Connection, announcement_id: int, viewer_id: Optional[int] = None
+) -> dict:
+    """อ่านประกาศ 1 แถว (พร้อมชื่อผู้ประกาศ)
+
+    🖼️ `viewer_id` = ผู้ที่กำลังเรียก (ทุก caller มี) ⇒ แนบ `image` ที่เซ็นให้คนนั้น
+       ไม่ส่ง = ไม่แนบ (เรียกจากที่ที่ไม่ต้องแสดงรูป)
+    """
     row = await conn.fetchrow(
         f"SELECT {_SELECT_COLUMNS} FROM announcements a {_JOINS} WHERE a.id = $1",
         announcement_id,
     )
-    return dict(row) if row else {}
+    if not row:
+        return {}
+    item = dict(row)
+    item["image"] = None
+    if viewer_id is not None:
+        images = await media_service.signed_media_map(
+            conn, "announcement", [announcement_id], viewer_id, kind="attachment"
+        )
+        imgs = images.get(announcement_id)
+        item["image"] = imgs[0] if imgs else None
+    return item
 
 
 async def list_announcements(
@@ -129,9 +147,20 @@ async def list_announcements(
             offset,
         )
 
+        # 🖼️ รูปประกาศของทั้งหน้า — คิวรีเดียว (ไม่ใช่ N+1)
+        images = await media_service.signed_media_map(
+            conn, "announcement", [r["id"] for r in rows], user_id, kind="attachment"
+        )
+
     page_size = max(1, limit)
     return {
-        "items": [dict(r) for r in rows],
+        "items": [
+            {
+                **dict(r),
+                "image": (images.get(r["id"]) or [None])[0],
+            }
+            for r in rows
+        ],
         "total": total or 0,
         "page": offset // page_size + 1,
         "page_size": page_size,
@@ -230,7 +259,7 @@ async def create_announcement(
             )
 
         # อ่านหลัง commit เพื่อให้ได้ชื่อผู้ประกาศจาก JOIN ครบ
-        return await _fetch_one(conn, new_id)
+        return await _fetch_one(conn, new_id, user_id)
 
 
 async def update_announcement(
@@ -299,7 +328,7 @@ async def update_announcement(
                 new_values=safe,
             )
 
-        return await _fetch_one(conn, announcement_id)
+        return await _fetch_one(conn, announcement_id, user_id)
 
 
 async def delete_announcement(
@@ -335,7 +364,7 @@ async def delete_announcement(
                 new_values={"deleted_at": "NOW()"},
             )
 
-        return await _fetch_one(conn, announcement_id)
+        return await _fetch_one(conn, announcement_id, user_id)
 
 
 async def restore_announcement(
@@ -370,7 +399,7 @@ async def restore_announcement(
                 new_values={"deleted_at": None},
             )
 
-        return await _fetch_one(conn, announcement_id)
+        return await _fetch_one(conn, announcement_id, user_id)
 
 
 async def retire_announcement(
@@ -414,7 +443,7 @@ async def retire_announcement(
                 new_values={"retired_at": "NOW()"},
             )
 
-        return await _fetch_one(conn, announcement_id)
+        return await _fetch_one(conn, announcement_id, user_id)
 
 
 async def unretire_announcement(
@@ -454,4 +483,4 @@ async def unretire_announcement(
                 new_values={"retired_at": None},
             )
 
-        return await _fetch_one(conn, announcement_id)
+        return await _fetch_one(conn, announcement_id, user_id)

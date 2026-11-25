@@ -225,6 +225,19 @@
 | POST | `/api/announcements/{id}/retire` | `MANAGE_ANNOUNCEMENTS` | — | `AnnouncementAdminOut` |
 | POST | `/api/announcements/{id}/unretire` | `MANAGE_ANNOUNCEMENTS` | — | `AnnouncementAdminOut` |
 
+::: tip รูปประกาศ — เห็นเฉพาะผู้ที่ล็อกอิน
+`AnnouncementAdminOut` และ `PublicAnnouncement` มี `image` (ออบเจกต์ `MediaImageOut`,
+สูงสุด 1 รูปต่อประกาศ) แต่มูลค่าขึ้นกับว่า endpoint รู้ว่าใครกำลังดู:
+
+- `GET /api/announcements` (หน้า admin) และ `GET /api/home/summary` → แนบ `image`
+  พร้อม URL ที่เซ็นให้ผู้ใช้คนนั้น
+- `GET /api/v1/public/announcements` (Landing, ไม่ล็อกอิน) → `image` เป็น `null` **เสมอ**
+  ตามข้อตัดสินใจ "รูปเฉพาะผู้ที่ล็อกอินเห็น"
+
+การแนบรูปทำผ่าน `POST /api/media/announcement/{id}` (ต้องมี `MANAGE_ANNOUNCEMENTS`)
+หลังสร้างประกาศแล้ว — ฝั่งเว็บจึง "บันทึกข้อความก่อน แล้วอัป" · อัปไม่สำเร็จไม่ทำให้ประกาศหาย
+:::
+
 ### ตั้งค่า · `/api/settings`
 
 | Method | Path | เงื่อนไข | คำขอ | คำตอบ |

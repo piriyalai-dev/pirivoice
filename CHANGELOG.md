@@ -127,6 +127,41 @@ commit แรก `1557490` 8 ส.ค. 2026 — Initial commit 99 ไฟล์ 15
 
 ---
 
+## [Unreleased] — ประกาศมีรูป — แต่เฉพาะคนที่ล็อกอินเห็น
+
+**บริบท ณ ตอนนั้น** — บอร์ด PIRI มีรูปแล้ว (PR ก่อนหน้า) · ประกาศยังเป็นข้อความล้วน
+ทั้งที่ประกาศคือของที่ผู้ดูแลอยากแนบภาพประกอบบ่อยที่สุด (ตารางเรียน · ป้ายประกาศ ·
+ผลการแข่งขัน) และ `media_images` รองรับ `owner_type='announcement'` ไว้ตั้งแต่ต้น
+
+**สิ่งที่ทำ**
+
+- `public_service.get_announcements(pool, viewer_id=None)` — เพิ่มพารามิเตอร์ผู้ดู
+  · มีค่า ⇒ แนบ `image` ที่เซ็น URL ให้ผู้ดูคนนั้น (คิวรีเดียวทั้งชุด)
+  · `None` ⇒ **ไม่แนบเลย** (endpoint public ที่ไม่ได้ล็อกอินยังใช้ตัวเดียวกัน)
+- `home_service` — ส่ง `user_id` เข้า `get_announcements` ⇒ ประกาศบนหน้าแรกมีรูป
+- `announcement_service` — `_fetch_one(conn, id, viewer_id)` แนบรูปในทุกคำตอบของ
+  create/update/delete/restore/retire/unretire · `list_announcements` แนบทั้งหน้า
+  ด้วย `signed_media_map` (ไม่ N+1)
+- schemas — `AnnouncementAdminOut.image` และ `AnnouncementOut.image` (public schema)
+- `AnnouncementManagement.vue` — modal มี `ImagePicker` (1 รูป) · โหมดเพิ่ม = อัปหลัง
+  สร้างสำเร็จ · โหมดแก้ไข = อัปแทนทันทีตอนบันทึก + ปุ่ม "ลบรูป" (ทำทันที) ·
+  รายการมี thumbnail · `Home.vue` แสดง thumbnail ใต้ข้อความประกาศ
+- **`Landing.vue` ไม่แก้เลย** — และไม่ต้องแก้ เพราะ backend ส่ง `image: null` เอง
+
+**ตัดสินใจเพราะ** — endpoint `/api/v1/public/announcements` ถูกเรียกโดยทั้ง Landing
+(ไม่ล็อกอิน) และ Home (ล็อกอิน) ⇒ "มีรูปหรือไม่" ต้องขึ้นกับ **ผู้เรียก** ไม่ใช่แค่ข้อมูล
+ทางเลือกอื่นคือเปิด signed URL ให้ผู้ไม่ระบุตัวตน ซึ่งเท่ากับ URL ที่ใครได้ไปก็ใช้ได้จนหมดอายุ
+⇒ เลือก "ไม่แนบ" ง่ายกว่า ปลอดภัยกว่า และตรงกับข้อตกลงเดิม (รูปเฉพาะผู้ที่ล็อกอิน)
+· default `viewer_id=None` ทำให้ผู้เรียกเดิม (Landing) ไม่ต้องแก้และไม่พัง
+
+**บทเรียน** — service ที่ถูกเรียกจากทั้งฝั่ง public และฝั่งล็อกอิน ต้องให้ "ข้อมูลที่ขึ้นกับ
+ผู้ดู" เป็น argument ที่ optional และ default = *ไม่ให้ข้อมูลนั้น* — ไม่ใช่ default = ข้อมูลเต็ม
+(ทิศทางของ default คือทิศทางของความปลอดภัย)
+
+**Migration:** ไม่มี — ใช้ตาราง `media_images` จาก `032_media_images`
+
+---
+
 ## [Unreleased] — บอร์ดมีรูปปก และคอมเมนต์แนบรูปได้
 
 **บริบท ณ ตอนนั้น** — ท่อรูปภาพกลาง (`media_images` + policy registry) เพิ่งเสร็จแต่ยังไม่มี
