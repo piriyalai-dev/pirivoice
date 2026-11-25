@@ -45,7 +45,7 @@ _TABLES = (
     "users", "rooms", "students", "issues",
     "issue_steps", "issue_escalations", "issue_countdowns",
     "issue_status_history", "audit_logs", "student_import_jobs",
-    "issue_comments", "issue_images", "issue_image_views",
+    "issue_comments", "issue_images", "issue_image_views", "media_images",
     "piri_boards", "piri_board_comments",
     "piri_vote_choices", "piri_votes", "piri_board_reactions",
     "piri_board_reports", "piri_board_views", "notifications",

@@ -161,6 +161,10 @@ CHECK_PATHS="/" BACKUP_ENVS="production" ./ops/backup/check_disk.sh
 
 - แถวที่ `deleted_at` เกิน `MEDIA_PURGE_AFTER_DAYS` (default 30) → ลบแถว **ก่อน** แล้วลบไฟล์
 - ไฟล์ orphan ที่เก่ากว่า `--orphan-age-hours` (default 24) → ลบ (กันชนกับ upload ที่ยังไม่ commit)
+- วน **สองครอบครัว**: `issue_images` ↔ prefix `issues/` และ `media_images` ↔ prefix `media/`
+  (รูปกลางของบอร์ด/ประกาศ/กิจกรรม/โปรไฟล์) — แต่ละตารางสแกนเฉพาะ prefix ของตัวเอง
+  ⇒ ไฟล์ใต้ `media/` ต้องไม่ถูกนับเป็น orphan ของ `issue_images` และกลับกัน
+  · ทุกไฟล์ใต้ `media_data` ถูก tar ออกจาก `backup.sh` เหมือนกันไม่ว่าอยู่ครอบครัวไหน
 
 ## 6) สิ่งที่ backup **ไม่รวม**
 

@@ -292,6 +292,60 @@ index: `idx_issues_room_status`, `idx_issues_reporter`, `idx_issues_level`, `idx
 
 index: `idx_issue_comments_issue`, `idx_issue_comments_user`
 
+## โดเมนสื่อ (รูปภาพ)
+
+รูปภาพมี **สองตารางที่แยกจากกันเด็ดขาด** — เรื่องใช้ของตัวเอง รูปของส่วนอื่นใช้ตารางกลาง
+ทั้งคู่เก็บไฟล์บน named volume `media_data` (`MEDIA_STORAGE_DIR`) แบบ WebP + thumbnail 480px
+ย่อด้านยาวสุด 1600px, ตัด EXIF, เก็บ `sha256`, soft delete และถูก `purge_media` เก็บกวาดหลัง 30 วัน
+
+### `issue_images` (migration 031)
+
+| คอลัมน์ | ชนิด · หมายเหตุ |
+|---|---|
+| `id` | `UUID PRIMARY KEY` |
+| `issue_id` | `INTEGER NOT NULL REFERENCES issues(id)` |
+| `uploaded_by` | `INTEGER REFERENCES users(id) ON DELETE SET NULL` |
+| `uploader_role` | `TEXT` snapshot ของบทบาทตอนอัป (ผู้แจ้ง/ผู้รับ) — ใช้คิดสิทธิ์และ receipt |
+| `storage_path` / `thumb_path` | `TEXT NOT NULL` — key ใต้ `issues/{issue_id}/…` |
+| `sha256` / `thumb_sha256` | `VARCHAR(64)` |
+| `bytes`, `width`, `height`, `mime` | metadata ของไฟล์ที่แปลงแล้ว |
+| `created_at`, `deleted_at` | `deleted_at` = soft delete |
+
+### `issue_image_views` (migration 031)
+
+read receipt — หนึ่งแถวต่อ (image, viewer) เก็บว่าใครเปิดดูเมื่อไร
+badge "ผู้รับผิดชอบเปิดดูแล้ว" คำนวณสดจาก `issues.current_assignee_id` ไม่ได้เก็บ flag
+
+### `media_images` (migration 032)
+
+ตาราง **polymorphic** สำหรับรูปของส่วนที่เหลือ — `(owner_type, owner_id)` ชี้ไปยังเจ้าของ
+5 ชนิดที่อยู่คนละตาราง ⇒ **ไม่มี FK ไปยังเจ้าของ** (FK ร่วมกันไม่ได้)
+
+| คอลัมน์ | ชนิด · หมายเหตุ |
+|---|---|
+| `id` | `UUID PRIMARY KEY` |
+| `owner_type` | `VARCHAR(24)` — `board` · `board_comment` · `announcement` · `event` · `user` (CHECK) |
+| `owner_id` | `INTEGER` — id ของแถวในตารางเจ้าของ (ไม่บังคับ FK) |
+| `kind` | `VARCHAR(16)` — `cover` · `attachment` · `avatar` (CHECK) |
+| `uploaded_by` | `INTEGER REFERENCES users(id) ON DELETE SET NULL` — **ไม่ถูกส่งออกใน API** |
+| `uploader_role` | `TEXT` |
+| `storage_path` / `thumb_path` | `TEXT` — key ใต้ `media/{owner_type}/{owner_id}/…` |
+| `sha256` / `thumb_sha256` | `VARCHAR(64)` |
+| `bytes`, `width`, `height`, `mime` | metadata |
+| `created_at`, `deleted_at` | `deleted_at` = soft delete |
+
+index:
+- `idx_media_owner (owner_type, owner_id, created_at) WHERE deleted_at IS NULL`
+- `idx_media_uploader (uploaded_by, created_at DESC) WHERE deleted_at IS NULL`
+- `uq_media_storage_path (storage_path)` UNIQUE
+- `uq_media_single_cover (owner_type, owner_id) WHERE deleted_at IS NULL AND kind IN ('cover','avatar')`
+  — กันปก/avatar ซ้ำ · "เปลี่ยนปก" จึงต้อง soft-delete ของเดิมในทรานแซกชันเดียวกับ INSERT ใหม่
+
+> ⚠️ **ไม่มี FK ไปยังเจ้าของโดยเจตนา** — ความปลอดภัยไม่ได้มาจาก FK แต่มาจาก
+> `services/media_policies.get_policy(owner_type).assert_can_view(...)` ที่ถูกเรียก **ทุกครั้ง
+> ที่เสิร์ฟไฟล์** ⇒ เจ้าของถูกลบ/ซ่อน = 404 ทันที · เจ้าของที่ถูก hard delete จะทิ้งแถวกำพร้าไว้
+> ให้ purge จัดการ
+
 ## โดเมนบอร์ดสาธารณะ
 
 ```mermaid

@@ -113,3 +113,33 @@ def test_exp_too_far_in_future_rejected(image_id):
 def test_missing_params_rejected(image_id):
     assert verify_signature(image_id, None, None, None, None) is None
     assert verify_signature(image_id, "full", None, "1", "x") is None
+
+
+# ============================================================
+# 🖼️ scope ของรูปกลาง (media) — แยกโดเมนลายเซ็นจากรูปของเรื่อง
+# ============================================================
+def test_media_scope_url_shape(image_id):
+    url = sign_url(image_id, "thumb", 42, now=1000, scope="media")
+    parsed = urlparse(url)
+    assert parsed.path == f"/api/media/file/{image_id}"
+    q = parse_qs(parsed.query)
+    assert q["viewer"] == ["42"] and q["variant"] == ["thumb"]
+
+
+def test_scopes_are_not_interchangeable(image_id):
+    exp, sig = make_signature(image_id, "full", 7, now=1000, scope="media")
+    assert verify_signature(image_id, "full", "7", str(exp), sig, now=1100, scope="media") == (7, "full")
+    # ลายเซ็นของ media ใช้กับ scope default (เรื่อง) ไม่ได้ และกลับกัน
+    assert verify_signature(image_id, "full", "7", str(exp), sig, now=1100) is None
+    exp2, sig2 = make_signature(image_id, "full", 7, now=1000)
+    assert verify_signature(image_id, "full", "7", str(exp2), sig2, now=1100, scope="media") is None
+
+
+def test_unknown_scope_raises_on_sign(image_id):
+    with pytest.raises(ValueError):
+        sign_url(image_id, "full", 1, scope="nope")
+
+
+def test_unknown_scope_verifies_none(image_id):
+    exp, sig = make_signature(image_id, "full", 1, now=1000)
+    assert verify_signature(image_id, "full", "1", str(exp), sig, now=1100, scope="nope") is None

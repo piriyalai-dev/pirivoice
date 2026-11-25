@@ -32,19 +32,28 @@ from core.media.base import MediaStorageError  # noqa: E402
 from core.media.local import LocalMediaStorage  # noqa: E402
 
 
+# (ตาราง, prefix ของ key) — 2 ครอบครัวที่ใช้ storage เดียวกันแต่แยกกันโดยสิ้นเชิง
+# ⚠️ ต้องแยก prefix: ไฟล์ใต้ `media/` ไม่ใช่ orphan ของ `issue_images` และกลับกัน
+FAMILIES: tuple[tuple[str, str], ...] = (
+    ("issue_images", "issues"),
+    ("media_images", "media"),
+)
+
+
 def _scan_files(storage: LocalMediaStorage) -> list[tuple[str, float]]:
-    """(relative path, mtime) ของทุกไฟล์ใต้ issues/"""
-    issues_dir = storage.root / "issues"
+    """(relative path, mtime) ของทุกไฟล์ใต้ prefix ของทุกครอบครัว"""
     out: list[tuple[str, float]] = []
-    if not issues_dir.is_dir():
-        return out
-    for dirpath, _dirnames, filenames in os.walk(issues_dir):
-        for name in filenames:
-            full = os.path.join(dirpath, name)
-            try:
-                out.append((os.path.relpath(full, storage.root).replace(os.sep, "/"), os.path.getmtime(full)))
-            except OSError:
-                continue
+    for _table, prefix in FAMILIES:
+        base = storage.root / prefix
+        if not base.is_dir():
+            continue
+        for dirpath, _dirnames, filenames in os.walk(base):
+            for name in filenames:
+                full = os.path.join(dirpath, name)
+                try:
+                    out.append((os.path.relpath(full, storage.root).replace(os.sep, "/"), os.path.getmtime(full)))
+                except OSError:
+                    continue
     return out
 
 
@@ -82,31 +91,37 @@ async def main() -> int:
         print(f"❌ เชื่อมต่อ DB ไม่ได้: {e}", file=sys.stderr)
         return 2
 
+    # ⚠️ ชื่อตารางมาจาก `FAMILIES` (ค่าคงที่ในโค้ด) ไม่ใช่ input ของผู้ใช้ — ใช้ f-string ได้
+    #    (เงื่อนไข/ค่าทั้งหมดยังผูกด้วย $n ตามปกติ)
+    paths: list[str] = []
+    expired_total = 0
     async with pool.acquire() as conn:
-        async with conn.transaction():
-            expired = await conn.fetch(
-                """
-                SELECT id, storage_path, thumb_path
-                FROM issue_images
-                WHERE deleted_at IS NOT NULL
-                  AND deleted_at < NOW() - ($1::int * INTERVAL '1 day')
-                ORDER BY deleted_at
-                FOR UPDATE
-                """,
-                days,
-            )
-            paths: list[str] = []
-            for row in expired:
-                for key in (row["storage_path"], row["thumb_path"]):
-                    if key:
-                        paths.append(key)
-
-            ids = [row["id"] for row in expired]
-            if args.apply and ids:
-                await conn.execute(
-                    "DELETE FROM issue_images WHERE id = ANY($1::uuid[])",
-                    ids,
+        for table, _prefix in FAMILIES:
+            async with conn.transaction():
+                expired = await conn.fetch(
+                    f"""
+                    SELECT id, storage_path, thumb_path
+                    FROM {table}
+                    WHERE deleted_at IS NOT NULL
+                      AND deleted_at < NOW() - ($1::int * INTERVAL '1 day')
+                    ORDER BY deleted_at
+                    FOR UPDATE
+                    """,
+                    days,
                 )
+                for row in expired:
+                    for key in (row["storage_path"], row["thumb_path"]):
+                        if key:
+                            paths.append(key)
+
+                ids = [row["id"] for row in expired]
+                if args.apply and ids:
+                    await conn.execute(
+                        f"DELETE FROM {table} WHERE id = ANY($1::uuid[])",
+                        ids,
+                    )
+                expired_total += len(expired)
+                print(f"   {table}: {len(expired)} แถวครบกำหนด")
 
     # ไฟล์ของแถวที่ลบไปแล้ว → ลบ (idempotent)
     file_errors = 0
@@ -124,16 +139,17 @@ async def main() -> int:
     # อ่านแถวที่ "ยังอยู่ใน DB ตอนนี้" — ใน dry-run แถวที่ครบกำหนดยังอยู่ จึงไม่ถูก
     # ตีความเป็น orphan (มันจะถูกลบพร้อมแถวในรอบ apply) ส่วนใน apply แถวนั้นถูกลบแล้ว
     # ⇒ ไฟล์ที่ค้างเพราะลบไม่สำเร็จจะถูกเก็บในรอบถัดไป
-    async with pool.acquire() as conn:
-        referenced = await conn.fetch(
-            "SELECT storage_path, thumb_path FROM issue_images"
-        )
     referenced_set: set[str] = set()
-    for r in referenced:
-        if r["storage_path"]:
-            referenced_set.add(r["storage_path"])
-        if r["thumb_path"]:
-            referenced_set.add(r["thumb_path"])
+    async with pool.acquire() as conn:
+        for table, _prefix in FAMILIES:
+            referenced = await conn.fetch(
+                f"SELECT storage_path, thumb_path FROM {table}"
+            )
+            for r in referenced:
+                if r["storage_path"]:
+                    referenced_set.add(r["storage_path"])
+                if r["thumb_path"]:
+                    referenced_set.add(r["thumb_path"])
 
     cutoff = time.time() - args.orphan_age_hours * 3600
     orphans = [(p, m) for p, m in _scan_files(storage) if p not in referenced_set and m < cutoff]
@@ -153,7 +169,7 @@ async def main() -> int:
 
     verb = "ลบ" if args.apply else "จะลบ"
     print(
-        f"🟢 สรุป: {verb}แถวที่เก็บเกินกำหนด {len(ids)} แถว ({len(paths)} ไฟล์) · "
+        f"🟢 สรุป: {verb}แถวที่เก็บเกินกำหนด {expired_total} แถว ({len(paths)} ไฟล์) · "
         f"orphan {len(orphans)} ไฟล์"
     )
     if file_errors or orphan_errors:

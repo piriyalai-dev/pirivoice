@@ -15,6 +15,7 @@ from services.notification_stream import hub
 from routers import auth_router
 from routers import issue_router
 from routers import image_router
+from routers import media_router
 from routers import dashboard_router
 from routers import student_router
 from routers import import_router
@@ -159,6 +160,8 @@ app.include_router(auth_router.router, prefix="/api")
 app.include_router(issue_router.router, prefix="/api")
 # 🖼️ เสิร์ฟไฟล์รูปด้วย signed URL — ไม่มี auth header (ดู routers/image_router.py)
 app.include_router(image_router.router, prefix="/api")
+# 🖼️ รูปภาพกลาง (บอร์ด/ประกาศ/กิจกรรม/โปรไฟล์) — signed URL scope 'media'
+app.include_router(media_router.router, prefix="/api")
 app.include_router(dashboard_router.router, prefix="/api")
 app.include_router(student_router.router, prefix="/api")
 app.include_router(import_router.router, prefix="/api")

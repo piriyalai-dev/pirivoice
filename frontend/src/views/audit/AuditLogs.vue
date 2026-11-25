@@ -49,6 +49,8 @@ const ACTION_LABELS: Record<string, string> = {
   DELETE_COMMENT: 'ลบคอมเมนต์',
   CREATE_ISSUE_IMAGE: 'แนบรูปในเรื่อง',
   DELETE_ISSUE_IMAGE: 'ลบรูปในเรื่อง',
+  CREATE_MEDIA_IMAGE: 'แนบรูป (บอร์ด/ประกาศ/กิจกรรม/โปรไฟล์)',
+  DELETE_MEDIA_IMAGE: 'ลบรูป (บอร์ด/ประกาศ/กิจกรรม/โปรไฟล์)',
   CREATE_USER: 'สร้างผู้ใช้',
   CHANGE_PASSWORD: 'เปลี่ยนรหัสผ่าน',
   UPDATE_STUDENT: 'แก้ไขนักเรียน',
