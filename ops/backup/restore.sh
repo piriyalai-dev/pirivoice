@@ -125,18 +125,26 @@ if [ "$SKIP_VERIFY" -eq 1 ]; then
     exit 0
 fi
 
-BACKEND_IMAGE=$(docker ps -q -f "name=^${ENV_NAME}_backend([.]|$)" | head -n1 | xargs -r docker inspect -f '{{.Config.Image}}')
-if [ -z "$BACKEND_IMAGE" ]; then
+# ⚠️ ใช้ network namespace ของ backend container (`--network container:<cid>`)
+#    เพราะ overlay network ของ Swarm ไม่อยู่ในรายการ "manually attachable"
+#    ⇒ `docker run --network app-internal-${ENV_NAME}` ล้มด้วย PermissionDenied
+#    การแชร์ netns ยังได้ DNS ของ Swarm มาใช้ (ชื่อ ${ENV_NAME}_infra_db resolve ได้)
+BACK_CID=$(docker ps -q -f "name=^${ENV_NAME}_app_backend([.]|$)" | head -n1)
+if [ -z "$BACK_CID" ]; then
     log "❌ ไม่พบ backend container ที่รันอยู่ของ $ENV_NAME — ตรวจด้วยมือหรือใช้ --skip-verify"
     exit 1
 fi
-NETWORK="app-internal-${ENV_NAME}"
-docker network inspect "$NETWORK" > /dev/null 2>&1 || NETWORK="bridge"
+BACKEND_IMAGE=$(docker inspect -f '{{.Config.Image}}' "$BACK_CID")
 
-log "🔍 verify_media.py ด้วย image $BACKEND_IMAGE (network $NETWORK)"
-if ! docker run --rm --network "$NETWORK" \
+# verify_media.py import core.config ⇒ ต้องมี secret ครบ (ค่าเดียวกับที่ backend ใช้)
+# ใช้ env จาก .env ที่ source ไว้ข้างบน — ไม่เขียนลง log
+log "🔍 verify_media.py ด้วย image $BACKEND_IMAGE (network namespace ของ backend)"
+if ! docker run --rm --network container:"$BACK_CID" \
         -e "DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${ENV_NAME}_infra_db:5432/${SCRATCH_DB}" \
         -e MEDIA_STORAGE_DIR=/data/media \
+        -e "API_KEY=${API_KEY:-}" \
+        -e "SECRET_KEY=${SECRET_KEY:-}" \
+        -e "JWT_SECRET=${JWT_SECRET:-}" \
         -v "$MEDIA_TMP":/data/media:ro \
         "$BACKEND_IMAGE" python scripts/verify_media.py; then
     die "verify_media.py พบความไม่สอดคล้อง"
