@@ -9,8 +9,8 @@
 #   (แต่ tar ที่ถ่ายก่อน dump อาจขาดรูปที่เพิ่ง commit ระหว่างนั้น)
 #
 # ใช้:
-#   ops/backup/backup.sh production
-#   ops/backup/backup.sh staging
+#   ops/backup/backup.sh              # ← แนะนำ: ใช้ ENV_NAME จาก .env ของ checkout นี้
+#   ops/backup/backup.sh <env_name>   # override เฉพาะกรณีจำเป็น (ต้องตรงกับ .env จริง)
 #
 # env ที่อ่าน: ENV_NAME, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB (จาก .env)
 # env ที่ปรับได้ (ไม่ใส่ก็ใช้ค่า default):

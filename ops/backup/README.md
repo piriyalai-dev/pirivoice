@@ -5,10 +5,10 @@
 
 | ไฟล์ | ใช้ทำอะไร | รันเมื่อไหร่ |
 |---|---|---|
-| `backup.sh <env>` | pg_dump → media tar → retention → offsite (rclone) | cron วันละครั้ง |
+| `backup.sh` | pg_dump → media tar → retention → offsite (rclone) | cron วันละครั้ง |
 | `check_disk.sh` | ดิสก์ 80/90% · อายุ backup · docker df · rclone quota | cron ทุกชั่วโมง |
 | `restore.sh --dump …` | **ซ้อมกู้** บน scratch DB + scratch media (ไม่แตะของจริง) | ก่อนขึ้น production / เดือนละครั้ง |
-| `purge_media.sh <env> [--apply]` | ลบรูปที่ soft-delete เกิน 30 วัน + ไฟล์ orphan | cron วันละครั้ง (ใช้ `--apply`) |
+| `purge_media.sh [--apply]` | ลบรูปที่ soft-delete เกิน 30 วัน + ไฟล์ orphan | cron วันละครั้ง (ใช้ `--apply`) |
 | `../../backend/scripts/verify_media.py` | เทียบ sha256 ของไฟล์กับ DB | เรียกผ่าน `restore.sh` หรือรันมือ |
 
 ## ลำดับที่สำคัญ
@@ -24,12 +24,14 @@
 
 ```cron
 # PRSC Portal — backup production (02:30) / staging (อาทิตย์ 04:00)
-30 2 * * * /home/prscportal/prsc_portal/piri_voice/ops/backup/backup.sh production >> /home/prscportal/backups/backup.log 2>&1
-0 4 * * 0  /home/prscportal/prsc_portal/prsc_test/ops/backup/backup.sh staging    >> /home/prscportal/backups/backup-staging.log 2>&1
+# ⚠️ ไม่ต้องใส่ชื่อ env: สคริปต์อ่าน ENV_NAME จาก .env ของ checkout นั้นเอง
+#    (พิมพ์ชื่อผิด เช่น "staging" ทั้งที่ .env เป็น "pirivoice_staging" → หา container ไม่เจอ)
+30 2 * * * /home/prscportal/prsc_portal/piri_voice/ops/backup/backup.sh >> /home/prscportal/backups/backup.log 2>&1
+0 4 * * 0  /home/prscportal/prsc_portal/prsc_test/ops/backup/backup.sh >> /home/prscportal/backups/backup-staging.log 2>&1
 # เฝ้าดิสก์ทุกชั่วโมง (:15)
 15 * * * * /home/prscportal/prsc_portal/piri_voice/ops/backup/check_disk.sh >> /home/prscportal/backups/disk.log 2>&1
 # purge รูปที่ลบเกิน 30 วัน + orphan (05:00)
-0 5 * * *  /home/prscportal/prsc_portal/piri_voice/ops/backup/purge_media.sh production --apply >> /home/prscportal/backups/purge.log 2>&1
+0 5 * * *  /home/prscportal/prsc_portal/piri_voice/ops/backup/purge_media.sh --apply >> /home/prscportal/backups/purge.log 2>&1
 ```
 
 > ⚠️ cron มี PATH แคบ — สคริปต์เรียก `docker`, `find`, `tar`, `flock` จาก `/usr/bin`
@@ -101,8 +103,8 @@ docker run --rm \
 
 ```bash
 cd /home/prscportal/prsc_portal/piri_voice
-./ops/backup/backup.sh production
-tail -n 30 ~/backups/prsc/production/…   # หรือดู log ที่ cron ใช้
+./ops/backup/backup.sh          # อ่าน ENV_NAME จาก .env ของ checkout นี้
+tail -n 30 ~/backups/backup.log # หรือดู log ที่ cron ใช้
 ```
 
 > หมายเหตุการตัดสินใจ: ใช้ `rclone copy` **ไม่ใช่ `sync`** และ **ยังไม่ลบไฟล์เก่าฝั่ง
@@ -114,11 +116,11 @@ tail -n 30 ~/backups/prsc/production/…   # หรือดู log ที่ cr
 ```bash
 cd /home/prscportal/prsc_portal/prsc_test        # staging checkout
 
-# ซ้อมกู้จาก dump ล่าสุด + media ล่าสุด
+# ซ้อมกู้จาก dump ล่าสุด + media ล่าสุด (env อ่านจาก .env; BACKUP_ROOT คือ ~/backups/prsc)
+ENV_NAME=$(grep -E '^ENV_NAME=' .env | cut -d= -f2-)
 ./ops/backup/restore.sh \
-  --env staging \
-  --dump  ~/backups/prsc/staging/db/$(ls -t ~/backups/prsc/staging/db | head -1) \
-  --media ~/backups/prsc/staging/media/$(ls -t ~/backups/prsc/staging/media | head -1)
+  --dump  "$(ls -t ~/backups/prsc/$ENV_NAME/db/*.dump | head -1)" \
+  --media "$(ls -t ~/backups/prsc/$ENV_NAME/media/*.tgz | head -1)"
 ```
 
 สิ่งที่สคริปต์ทำ:
@@ -146,8 +148,8 @@ CHECK_PATHS="/" BACKUP_ENVS="production" ./ops/backup/check_disk.sh
 ## 5) purge (ลบจริง)
 
 ```bash
-./ops/backup/purge_media.sh production             # dry-run — แสดงสิ่งที่จะลบ
-./ops/backup/purge_media.sh production --apply     # ลบจริง (นี่คือที่ cron เรียก)
+./ops/backup/purge_media.sh             # dry-run — แสดงสิ่งที่จะลบ
+./ops/backup/purge_media.sh --apply     # ลบจริง (นี่คือที่ cron เรียก)
 ```
 
 - แถวที่ `deleted_at` เกิน `MEDIA_PURGE_AFTER_DAYS` (default 30) → ลบแถว **ก่อน** แล้วลบไฟล์

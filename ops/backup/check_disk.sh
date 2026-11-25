@@ -17,7 +17,7 @@
 #   CHECK_PATHS="/"               · path ที่ตรวจ (คั่นด้วยช่องว่าง)
 #   DISK_WARN_PCT=80 · DISK_CRIT_PCT=90
 #   BACKUP_ROOT=$HOME/backups/prsc
-#   BACKUP_ENVS="production staging"   · env ที่ต้องมี backup สด
+#   BACKUP_ENVS=""                     · env ที่ต้องมี backup สด (ว่าง = ค้นหาเองจากโฟลเดอร์)
 #   BACKUP_MAX_AGE_HOURS=30           · เตือนถ้า dump ล่าสุดเก่ากว่านี้
 #   RCLONE_CONFIG=... · RCLONE_IMAGE=... (เหมือน backup.sh)
 #
@@ -34,7 +34,7 @@ CHECK_PATHS="${CHECK_PATHS:-/}"
 DISK_WARN_PCT="${DISK_WARN_PCT:-80}"
 DISK_CRIT_PCT="${DISK_CRIT_PCT:-90}"
 BACKUP_ROOT="${BACKUP_ROOT:-$HOME/backups/prsc}"
-BACKUP_ENVS="${BACKUP_ENVS:-production staging}"
+BACKUP_ENVS="${BACKUP_ENVS:-}"   # ว่าง = ค้นหา env ที่มีโฟลเดอร์ db ใต้ BACKUP_ROOT เอง
 BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-30}"
 RCLONE_CONFIG="${RCLONE_CONFIG:-$HOME/.config/rclone/rclone.conf}"
 RCLONE_IMAGE="${RCLONE_IMAGE:-rclone/rclone:1.68.1}"
@@ -60,6 +60,13 @@ for path in $CHECK_PATHS; do
 done
 
 # ---------- 2) อายุ backup ล่าสุด ----------
+# ไม่ระบุ BACKUP_ENVS ⇒ ใช้ชื่อโฟลเดอร์ที่มี db/ อยู่จริง (กันพิมพ์ชื่อ env ผิดจาก .env)
+if [ -z "$BACKUP_ENVS" ] && [ -d "$BACKUP_ROOT" ]; then
+    BACKUP_ENVS=$(find "$BACKUP_ROOT" -mindepth 2 -maxdepth 2 -type d -name db -printf '%h\n' \
+        | xargs -r -n1 basename | sort -u | tr '\n' ' ')
+fi
+[ -n "$BACKUP_ENVS" ] || log "ℹ️ ยังไม่มี backup ของ env ใดใต้ $BACKUP_ROOT"
+
 for env in $BACKUP_ENVS; do
     dir="$BACKUP_ROOT/$env/db"
     latest=$(find "$dir" -maxdepth 1 -type f -name '*.dump' -printf '%T@ %p\n' 2>/dev/null \
