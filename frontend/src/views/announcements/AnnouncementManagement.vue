@@ -18,6 +18,12 @@ import type {
   AnnouncementPriority,
   AnnouncementStatus,
 } from '@/types/announcement'
+import type { MediaImage } from '@/types/media'
+import { uploadMedia, deleteMedia } from '@/services/media'
+import { compressImages } from '@/utils/imageCompress'
+import { DEFAULT_MEDIA_LIMITS } from '@/types/media'
+import ImagePicker from '@/components/media/ImagePicker.vue'
+import MediaThumb from '@/components/media/MediaThumb.vue'
 
 // 📣 หน้าจัดการประกาศหน้า Landing Page (ต้องมีสิทธิ์ MANAGE_ANNOUNCEMENTS)
 // - ลบ = soft delete → ยังเห็นได้เมื่อสลับตัวกรองเป็น "ถูกลบ" แล้วกู้คืนได้
@@ -129,12 +135,27 @@ const form = reactive<{ message: string; priority: AnnouncementPriority; link: s
   link: '',
 })
 
+/**
+ * 🖼️ รูปประกาศ — ยัง **ไม่** อัปโหลด
+ * • โหมดเพิ่ม: อัปหลังสร้างสำเร็จ (endpoint รูปต้องมี id) — ท่าเดียวกับ `NewIssue`
+ * • โหมดแก้ไข: มี id แล้ว ⇒ อัปได้ทันทีตอนบันทึก (แทนรูปเดิม)
+ */
+const imageFiles = ref<File[]>([])
+/** รูปที่ประกาศนี้มีอยู่แล้ว (โหมดแก้ไข) — แสดง preview + ปุ่มลบ */
+const currentImage = ref<MediaImage | null>(null)
+
+function resetImageState(a?: Announcement) {
+  imageFiles.value = []
+  currentImage.value = a?.image ?? null
+}
+
 function openAdd() {
   modalMode.value = 'add'
   editingId.value = null
   form.message = ''
   form.priority = 'normal'
   form.link = ''
+  resetImageState()
   saveError.value = ''
   modalOpen.value = true
 }
@@ -145,8 +166,31 @@ function openEdit(a: Announcement) {
   form.message = a.message
   form.priority = a.priority
   form.link = a.link ?? ''
+  resetImageState(a)
   saveError.value = ''
   modalOpen.value = true
+}
+
+/** ลบรูปของประกาศที่มีอยู่แล้ว — ทำทันที (มี id แล้ว ไม่ต้องรอ "บันทึก") */
+async function removeCurrentImage() {
+  if (modalMode.value !== 'edit' || editingId.value === null || !currentImage.value) return
+  const { isConfirmed } = await Swal.fire({
+    title: 'ลบรูปประกาศนี้?',
+    text: 'รูปจะหายจากประกาศทันที (แนบใหม่ได้ภายหลัง)',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ลบรูป',
+    confirmButtonColor: BRAND,
+    cancelButtonText: 'ยกเลิก',
+  })
+  if (!isConfirmed) return
+  try {
+    await deleteMedia('announcement', editingId.value, currentImage.value.id)
+    currentImage.value = null
+    // รายการหลัง modal ปิดจะโหลดใหม่ — ที่นี่แค่ยืนยันว่ารูปถูกถอดจากฟอร์มแล้ว
+  } catch (e) {
+    Swal.fire({ icon: 'error', title: 'ลบรูปไม่สำเร็จ', text: errorText(e) })
+  }
 }
 
 function closeModal() {
@@ -168,8 +212,36 @@ async function submitForm() {
   saving.value = true
   saveError.value = ''
   try {
+    // 🖼️ ต้องมี id ของประกาศก่อนอัป ⇒ "บันทึกข้อความก่อน แล้วอัป" (ท่าเดียวกับ `NewIssue`)
+    let announceId = editingId.value
     if (modalMode.value === 'add') {
-      await createAnnouncement({ message, priority: form.priority, link })
+      const created = await createAnnouncement({ message, priority: form.priority, link })
+      announceId = created.id
+    } else if (editingId.value !== null) {
+      await updateAnnouncement(editingId.value, { message, priority: form.priority, link })
+    }
+
+    // ⚠️ อัปไม่สำเร็จ **ต้องไม่ทำให้ข้อความที่บันทึกแล้วหาย** — แจ้งเตือนแล้วปิด modal
+    let attachError: string | null = null
+    if (imageFiles.value.length && announceId !== null) {
+      try {
+        const prepared = await compressImages(imageFiles.value)
+        await uploadMedia('announcement', announceId, prepared)
+        imageFiles.value = []
+        currentImage.value = null // list จะโหลดใหม่หลัง modal ปิด
+      } catch (e) {
+        attachError = errorText(e)
+      }
+    }
+
+    if (attachError) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'บันทึกประกาศแล้ว แต่แนบรูปไม่สำเร็จ',
+        text: `ข้อความถูกบันทึกแล้ว — รูปไม่ถูกแนบ (${attachError})`,
+        confirmButtonColor: BRAND,
+      })
+    } else if (modalMode.value === 'add') {
       Swal.fire({
         icon: 'success',
         title: 'ประกาศแล้ว',
@@ -177,8 +249,7 @@ async function submitForm() {
         timer: 1500,
         showConfirmButton: false,
       })
-    } else if (editingId.value !== null) {
-      await updateAnnouncement(editingId.value, { message, priority: form.priority, link })
+    } else {
       Swal.fire({ icon: 'success', title: 'บันทึกแล้ว', timer: 1000, showConfirmButton: false })
     }
     modalOpen.value = false
@@ -472,12 +543,22 @@ const hasAnyItems = computed(() => items.value.length > 0)
               <span class="text-[11px] text-ink-3">{{ fmtDateTime(a.created_at) }}</span>
             </div>
 
-            <p
-              class="whitespace-pre-wrap break-words text-[15px] leading-relaxed"
-              :class="rowState(a) === 'active' ? 'text-stone-800' : 'text-stone-500'"
-            >
-              {{ a.message }}
-            </p>
+            <!-- 🖼️ รูปประกาศ (ถ้ามี) — วางซ้ายข้อความ เผื่อคนแสกนรายการเห็นว่าอันไหนมีรูป -->
+            <div class="flex items-start gap-3">
+              <MediaThumb
+                v-if="a.image"
+                :image="a.image"
+                alt="รูปประกาศ"
+                class="w-16 shrink-0"
+                rounded="rounded-lg"
+              />
+              <p
+                class="min-w-0 flex-1 whitespace-pre-wrap break-words text-[15px] leading-relaxed"
+                :class="rowState(a) === 'active' ? 'text-stone-800' : 'text-stone-500'"
+              >
+                {{ a.message }}
+              </p>
+            </div>
 
             <!-- ลิงก์แนบ -->
             <a
@@ -711,6 +792,41 @@ const hasAnyItems = computed(() => items.value.length > 0)
                 <p class="mt-1 text-[11px] text-ink-3">
                   ต้องขึ้นต้นด้วย http:// หรือ https:// เท่านั้น — เว้นว่าง = ไม่มีลิงก์
                 </p>
+              </div>
+
+              <!-- 🖼️ รูปประกาศ (ไม่บังคับ) — 1 รูป/ประกาศ -->
+              <div>
+                <p class="mb-1 text-xs font-semibold text-stone-500">
+                  รูปประกาศ <span class="text-ink-3">(ไม่บังคับ · สูงสุด 1 รูป)</span>
+                </p>
+                <div
+                  v-if="currentImage"
+                  class="mb-2 flex items-center gap-3 rounded-xl border border-stone-200 p-2"
+                >
+                  <MediaThumb
+                    :image="currentImage"
+                    alt="รูปประกาศปัจจุบัน"
+                    class="w-14 shrink-0"
+                    rounded="rounded-lg"
+                  />
+                  <p class="min-w-0 flex-1 text-[12px] leading-snug text-ink-3">
+                    รูปปัจจุบัน — เลือกรูปใหม่ด้านล่างเพื่อแทนที่
+                  </p>
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-xl px-3 min-h-11 py-2 text-[13px] font-semibold text-brand ring-1 ring-red-200 hover:bg-red-50"
+                    @click="removeCurrentImage"
+                  >
+                    <i class="bi bi-trash3"></i> ลบรูป
+                  </button>
+                </div>
+                <ImagePicker
+                  v-model:files="imageFiles"
+                  :max-count="DEFAULT_MEDIA_LIMITS.max_per_owner"
+                  :size-limit-mb="DEFAULT_MEDIA_LIMITS.size_limit_mb"
+                  :disabled="saving"
+                  hint="ผู้ใช้ที่เข้าสู่ระบบเห็นรูปนี้บนหน้าแรก — หน้า Landing (ไม่ล็อกอิน) แสดงเฉพาะข้อความ"
+                />
               </div>
 
               <p

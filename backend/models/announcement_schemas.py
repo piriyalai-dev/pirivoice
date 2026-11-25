@@ -9,6 +9,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from models.media_schemas import MediaImageOut
+
 # ต้องตรงกับ CHECK constraint `chk_announcements_priority` ใน init_db
 AnnouncementPriority = Literal["normal", "high", "urgent"]
 
@@ -99,6 +101,8 @@ class AnnouncementAdminOut(BaseModel):
     updated_by: Optional[int] = None
     created_by_name: Optional[str] = None
     updated_by_name: Optional[str] = None
+    # 🖼️ รูปที่แนบกับประกาศ (media_images owner_type='announcement') — None = ไม่มี
+    image: Optional[MediaImageOut] = None
 
 
 class AnnouncementListOut(BaseModel):

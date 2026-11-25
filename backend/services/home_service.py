@@ -106,7 +106,8 @@ async def get_home_summary(pool: asyncpg.Pool, user_id: int) -> dict:
     ⚠️ **ประกาศไม่ถูกตัด/ไม่ถูก slice** — `get_announcements()` จงใจไม่มี LIMIT
     ตามที่เจ้าของระบบสั่ง ("โชว์ทั้งหมดที่ยังไม่ถอดออก") ⇒ ส่งออกไปทั้งชุดเหมือนเดิม
     """
-    announcements = await public_service.get_announcements(pool)
+    # 🖼️ ส่ง user_id ⇒ ประกาศบน Home มีรูป (Landing ที่ไม่ล็อกอินยังเป็นข้อความล้วน)
+    announcements = await public_service.get_announcements(pool, user_id)
     my_issues = await issue_service.my_issue_summary(pool, user_id)
     stats = await me_service.get_personal_stats(pool, user_id)
     pending_on_me, pending_total, unvoted, unvoted_total = await _queues(pool, user_id)

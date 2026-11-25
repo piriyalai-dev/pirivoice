@@ -7,6 +7,8 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from models.media_schemas import MediaImageOut
+
 
 class SystemStatsOut(BaseModel):
     """สถิติรวมของระบบ (Public)
@@ -43,8 +45,14 @@ class ResolvedCaseOut(BaseModel):
 
 
 class AnnouncementOut(BaseModel):
-    """ประกาศสาธารณะ"""
+    """ประกาศสาธารณะ
+
+    🖼️ `image` มีค่าเฉพาะเมื่อ endpoint รู้ว่าใครกำลังดู (`/api/home` ที่ล็อกอิน)
+       endpoint public ที่ไม่ต้องล็อกอิน (`/api/v1/public/announcements`, Landing) ส่ง None
+       เสมอ ⇒ Landing ยังเป็นข้อความล้วน ตามข้อตัดสินใจ "รูปเฉพาะผู้ล็อกอินเห็น"
+    """
     id: int
     message: str
     priority: str  # normal / high / urgent
     link: Optional[str] = None
+    image: Optional[MediaImageOut] = None

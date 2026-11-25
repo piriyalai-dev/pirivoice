@@ -27,6 +27,7 @@ import SchoolSystemsCard from '@/components/SchoolSystemsCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 import AppEmptyRow from '@/components/ui/AppEmptyRow.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import MediaThumb from '@/components/media/MediaThumb.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppCard from '@/components/ui/AppCard.vue';
 import { statusShort } from '@/constants/status';
@@ -610,7 +611,19 @@ function destinationIcon(dest: string | null | undefined): string {
           <p class="text-xs font-bold text-ink-2">ประกาศโรงเรียน</p>
           <div v-for="a in announcements" :key="a.id" class="flex items-start gap-2.5">
             <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" :class="annIconColor[a.priority] || 'bg-ink-3'"></span>
-            <p class="text-sm font-medium leading-relaxed text-ink-1">{{ a.message }}</p>
+            <!-- 🖼️ รูปประกาศ (ถ้ามี) — backend แนบมาเฉพาะ endpoint ที่ล็อกอินแล้ว
+                 (Landing ที่ไม่ล็อกอินได้ `image = null` เสมอ) -->
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium leading-relaxed text-ink-1">{{ a.message }}</p>
+              <MediaThumb
+                v-if="a.image"
+                :image="a.image"
+                alt="รูปประกาศ"
+                class="mt-1.5 w-28 max-w-full"
+                rounded="rounded-lg"
+                aspect="aspect-[4/3]"
+              />
+            </div>
           </div>
         </div>
       </div>
