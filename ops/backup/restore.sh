@@ -102,7 +102,7 @@ log "🐘 pg_restore…"
 if ! docker exec -i -e PGPASSWORD="$POSTGRES_PASSWORD" "$DB_CID" \
         pg_restore -U "$POSTGRES_USER" -d "$SCRATCH_DB" \
         --no-owner --no-privileges --exit-on-error < "$DUMP"; then
-    die "pg_restore ล้ม (scratch DB ยังอยู่ถ้าใช้ --keep ไม่ได้ — กำลังลบ)"
+    die "pg_restore ล้ม"
 fi
 log "✅ restore DB สำเร็จ"
 
