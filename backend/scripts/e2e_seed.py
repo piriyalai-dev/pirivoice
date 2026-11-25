@@ -20,35 +20,45 @@ DB_URL = os.environ.get("E2E_DATABASE_URL", "postgresql://test_admin:test_passwo
 OUT = os.environ.get("E2E_CREDS_OUT", "/tmp/e2e_credentials.json")
 PASSWORD = "E2Epass123!"
 ROOM_CODE = "ม.5/1"
+OUTSIDER_ROOM = "ม.5/2"
 
 # username ต้องสั้น ≤10 ตัว (student_id VARCHAR(10))
+# (room, seat, role, is_admin)
 USERS = [
-    ("e2estu", "student", False),
-    ("e2ecou", "council_member", False),
-    ("e2eadm", "council_president", True),
+    ("e2estu", ROOM_CODE, 1, "student", False),            # ผู้แจ้ง
+    ("e2ehead", ROOM_CODE, 2, "class_president", False),   # ผู้รับ (หัวหน้าห้อง)
+    ("e2ecou", ROOM_CODE, 3, "council_member", False),     # สมาชิกสภา — ผู้เปิดดูอีกคน
+    ("e2eadm", ROOM_CODE, 4, "council_president", True),   # ประธานสภา (admin)
+    ("e2eout", OUTSIDER_ROOM, 1, "student", False),        # นักเรียนห้องอื่น — ต้องมองไม่เห็น
 ]
+
+
+async def _ensure_room(pool, room_code: str) -> int:
+    async with pool.acquire() as conn:
+        room_id = await conn.fetchval(
+            "SELECT id FROM rooms WHERE room_code = $1 AND deleted_at IS NULL", room_code
+        )
+        if not room_id:
+            room_id = await conn.fetchval(
+                "INSERT INTO rooms (room_code, room_name, level) VALUES ($1, $2, 'ม.5') RETURNING id",
+                room_code, room_code
+            )
+        print(f"✅ room_id={room_id} ({room_code})")
+        return room_id
 
 
 async def main() -> None:
     pool = await asyncpg.create_pool(DB_URL)
     try:
-        # 1) room (ถ้ายังไม่มี)
-        async with pool.acquire() as conn:
-            room_id = await conn.fetchval(
-                "SELECT id FROM rooms WHERE room_code = $1 AND deleted_at IS NULL", ROOM_CODE
-            )
-            if not room_id:
-                room_id = await conn.fetchval(
-                    "INSERT INTO rooms (room_code, room_name, level) VALUES ($1, $2, 'ม.5') RETURNING id",
-                    ROOM_CODE, ROOM_CODE
-                )
-            print(f"✅ room_id={room_id} ({ROOM_CODE})")
+        # 1) rooms (ถ้ายังไม่มี)
+        await _ensure_room(pool, ROOM_CODE)
+        await _ensure_room(pool, OUTSIDER_ROOM)
 
         # 2) users
         creds = {}
-        for i, (username, role, is_admin) in enumerate(USERS, start=1):
+        for username, room_code, seat, role, is_admin in USERS:
             uid = await auth_service.register_user(
-                pool, username, PASSWORD, f"E2E {username}", username, ROOM_CODE, i, role
+                pool, username, PASSWORD, f"E2E {username}", username, room_code, seat, role
             )
             async with pool.acquire() as conn:
                 if is_admin:

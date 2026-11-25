@@ -80,22 +80,29 @@ ssh prscportal@pirivoice-prod 'chmod 600 ~/.config/rclone/rclone.conf'
 
 **ขั้นที่ 3 — ทดสอบผ่าน Docker (ภาพเดียวกับที่ backup.sh ใช้)**
 
+> ⚠️ mount **โฟลเดอร์** `~/.config/rclone` แบบ read-write (ห้ามใส่ `:ro`)
+> และรันด้วย `--user "$(id -u):$(id -g)"` — rclone ต้อง refresh OAuth token แล้วเขียน
+> `rclone.conf` กลับ ถ้า mount แบบ ro จะ refresh ไม่ได้และไฟล์อาจกลายเป็นของ root
+
 ```bash
 ssh prscportal@pirivoice-prod
-docker run --rm \
-  -v ~/.config/rclone:/config/rclone:ro \
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v ~/.config/rclone:/config/rclone \
   -e RCLONE_CONFIG=/config/rclone/rclone.conf \
+  -e HOME=/tmp \
   rclone/rclone:1.68.1 lsd gdrive:
 
 # สร้างโฟลเดอร์ปลายทาง + ทดสอบเขียน
-docker run --rm \
-  -v ~/.config/rclone:/config/rclone:ro \
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v ~/.config/rclone:/config/rclone \
   -e RCLONE_CONFIG=/config/rclone/rclone.conf \
+  -e HOME=/tmp \
   rclone/rclone:1.68.1 mkdir gdrive:PIRIvoiceBackup
 
-docker run --rm \
-  -v ~/.config/rclone:/config/rclone:ro \
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v ~/.config/rclone:/config/rclone \
   -e RCLONE_CONFIG=/config/rclone/rclone.conf \
+  -e HOME=/tmp \
   rclone/rclone:1.68.1 lsd gdrive:PIRIvoiceBackup
 ```
 

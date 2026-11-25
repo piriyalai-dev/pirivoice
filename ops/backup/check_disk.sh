@@ -96,9 +96,13 @@ docker system df 2>/dev/null | sed 's/^/    /' || log "ALERT WARN อ่าน d
 
 # ---------- 4) rclone quota ----------
 if [ -f "$RCLONE_CONFIG" ]; then
+    # เหมือน backup.sh: mount โฟลเดอร์ config แบบ rw + รันด้วย uid ของเจ้าของ
+    # (rclone refresh token ระหว่างเรียก API แล้วเขียน rclone.conf กลับ)
     if about=$(timeout 60 docker run --rm \
-            -v "$RCLONE_CONFIG":/config/rclone/rclone.conf:ro \
+            --user "$(id -u):$(id -g)" \
+            -v "$(dirname "$RCLONE_CONFIG")":/config/rclone \
             -e RCLONE_CONFIG=/config/rclone/rclone.conf \
+            -e HOME=/tmp \
             "$RCLONE_IMAGE" about "$RCLONE_REMOTE": 2>&1); then
         log "☁️ rclone about $RCLONE_REMOTE:"
         printf '%s\n' "$about" | sed 's/^/    /'

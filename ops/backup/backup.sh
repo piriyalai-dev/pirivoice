@@ -139,10 +139,17 @@ if [ ! -f "$RCLONE_CONFIG" ]; then
 fi
 
 log "☁️ อัปโหลด offsite → $RCLONE_REMOTE_PATH"
+# ⚠️ mount **โฟลเดอร์** config (ไม่ใช่ไฟล์เดียว) แบบ read-write เพราะ rclone ต้อง
+#    refresh OAuth token แล้วเขียน rclone.conf กลับ (mount ไฟล์เดียวจะ rename ทับไม่ได้)
+# ⚠️ รันด้วย uid/gid ของเจ้าของเครื่อง — ไม่ให้ไฟล์ config กลายเป็น root:root
+#    (rclone image ปกติรันเป็น root ⇒ token ที่ refresh แล้วจะเขียนไม่ได้/เจ้าของเปลี่ยน)
+RCLONE_DIR=$(dirname "$RCLONE_CONFIG")
 RCLONE_RUN=(docker run --rm
-    -v "$RCLONE_CONFIG":/config/rclone/rclone.conf:ro
+    --user "$(id -u):$(id -g)"
+    -v "$RCLONE_DIR":/config/rclone
     -v "$BACKUP_ROOT":/backups:ro
     -e RCLONE_CONFIG=/config/rclone/rclone.conf
+    -e HOME=/tmp
     "$RCLONE_IMAGE")
 
 OFFSITE_OK=1
