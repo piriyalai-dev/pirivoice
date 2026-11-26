@@ -19,3 +19,6 @@ default_admin_credentials.txt
 reports/คู่มือการใช้งานระบบ_PIRIvoice.odt
 reports/คู่มือการใช้งานระบบ_PIRIvoice.pdf
 reports/.~lock.*
+
+# ผลลัพธ์ชั่วคราวจากการแคปหน้าจอ (PNG + สถานะ) — เก็บเฉพาะเครื่องมือและ targets
+reports/screenshot_capture/out/
