@@ -137,6 +137,7 @@ def tprops(size: float, bold: bool = False, italic: bool = False,
         'fo:language="th"', 'fo:country="TH"',
         'style:language-asian="th"', 'style:country-asian="TH"',
         'style:language-complex="th"', 'style:country-complex="TH"',
+        'fo:hyphenate="false"',
     ]
     if italic:
         parts += ['fo:font-style="italic"', 'style:font-style-asian="italic"',
@@ -257,7 +258,7 @@ class Asset:
 def figure_size(w: int, h: int) -> tuple[float, float]:
     """คืนขนาด (ซม.) โดยรักษาสัดส่วนและไม่เกินกรอบที่กำหนด"""
     portrait = h > w
-    max_w, max_h = (10.0, 12.0) if portrait else (14.0, 11.0)
+    max_w, max_h = (10.0, 8.0) if portrait else (14.0, 9.5)
     nat_w, nat_h = w * PX2CM, h * PX2CM
     scale = min(max_w / nat_w, max_h / nat_h)
     return nat_w * scale, nat_h * scale
@@ -631,17 +632,11 @@ class Doc:
         self.parts.append(''.join(out))
 
     def callout(self, kind: str, label: str, body: str) -> None:
-        cell = 'CellWarn' if kind == 'warn' else 'CellTip'
+        """กล่องหมายเหตุแบบเอกสารราชการ: ย่อหน้าธรรมดา พื้นขาว ไม่มีแถบสี"""
         self.parts.append(
-            '<table:table table:name="Callout%d" table:style-name="TableCallout">'
-            '<table:table-column table:style-name="ColCallout"/>'
-            '<table:table-row table:style-name="RowKeep">'
-            '<table:table-cell table:style-name="%s" office:value-type="string">'
-            '<text:p text:style-name="CalloutText">'
+            '<text:p text:style-name="CalloutPlain">'
             '<text:span text:style-name="StrongChar">%s:</text:span> %s'
-            '</text:p></table:table-cell></table:table-row></table:table>'
-            % (self.n_table, cell, e(label), inline(body)))
-        self.n_table += 1
+            '</text:p>' % (e(label), inline(body)))
 
     def ol(self, items: list[str]) -> None:
         self.parts.append('<text:list text:style-name="LNumber">')
@@ -736,24 +731,28 @@ def master_pages() -> str:
 def paragraph_styles() -> str:
     S = []
     S.append('<style:default-style style:family="paragraph">'
-             f'<style:paragraph-properties fo:line-height="115%" fo:text-align="justify"/>'
+             f'<style:paragraph-properties fo:line-height="100%" fo:text-align="justify" '
+             'style:justify-single-word="false"/>'
              f'<style:text-properties {tprops(16)}/>'
              '</style:default-style>')
     S.append(pstyle('Standard', text=tprops(16)))
     S.append(pstyle('BodyText', para=(
-        'fo:text-align="justify" fo:text-indent="1.25cm" fo:margin-bottom="0.18cm" '
-        'fo:line-height="115%" style:auto-text-indent="false"'), text=tprops(16)))
+        'fo:text-align="justify" fo:text-indent="1.25cm" fo:margin-bottom="0.15cm" '
+        'fo:line-height="100%" style:justify-single-word="false" style:auto-text-indent="false"'), text=tprops(16)))
     S.append(pstyle('BodyTextNoIndent', parent='BodyText',
                     para='fo:text-indent="0cm" style:auto-text-indent="false"', text=tprops(16)))
     S.append(pstyle('ListParagraph', para=(
-        'fo:text-align="left" fo:margin-left="0cm" fo:margin-bottom="0.1cm" '
-        'fo:line-height="115%" fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
+        'fo:text-align="left" fo:margin-left="0cm" fo:margin-bottom="0.08cm" '
+        'fo:line-height="100%" fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
     S.append(pstyle('StepLabel', para=(
         'fo:keep-with-next="always" fo:margin-top="0.25cm" fo:margin-bottom="0.08cm" '
         'fo:text-align="left" fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16, bold=True)))
     S.append(pstyle('Signature', para=(
-        'fo:text-align="center" fo:margin-top="0.25cm" fo:margin-bottom="0cm" '
+        'fo:text-align="center" fo:margin-top="0.15cm" fo:margin-bottom="0cm" '
         'fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16, bold=True)))
+    S.append(pstyle('PrefaceText', parent='BodyText', para=(
+        'fo:text-align="justify" fo:text-indent="1.25cm" fo:margin-bottom="0.05cm" '
+        'fo:line-height="90%" style:auto-text-indent="false"'), text=tprops(16)))
 
     # Heading 1
     h1_text = tprops(18, bold=True)
@@ -803,8 +802,8 @@ def paragraph_styles() -> str:
         'fo:text-align="center" fo:keep-with-next="always" fo:margin-top="0.25cm" '
         'fo:margin-bottom="0.1cm" fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
     S.append(pstyle('FigureCaption', para=(
-        'fo:text-align="center" fo:margin-bottom="0.35cm" fo:line-height="115%" '
-        'fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
+        'fo:text-align="center" fo:margin-bottom="0.35cm" fo:line-height="100%" '
+        'fo:keep-together="always" fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
     S.append(pstyle('FigurePlaceholder', para=(
         'fo:text-align="center" fo:keep-with-next="always" fo:margin-top="0.25cm" '
         f'fo:margin-bottom="0.1cm" fo:padding="0.3cm" fo:border="0.6pt dashed #B9A98E" '
@@ -813,9 +812,10 @@ def paragraph_styles() -> str:
     S.append(pstyle('TableCaption', para=(
         'fo:text-align="left" fo:keep-with-next="always" fo:margin-top="0.2cm" '
         'fo:margin-bottom="0.15cm" fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
-    S.append(pstyle('CalloutText', para=(
-        'fo:text-align="left" fo:line-height="110%" fo:margin="0cm" '
-        'fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(15)))
+    S.append(pstyle('CalloutPlain', para=(
+        'fo:text-align="left" fo:margin-top="0.2cm" fo:margin-bottom="0.2cm" '
+        'fo:margin-left="1.25cm" fo:keep-together="always" fo:line-height="100%" '
+        'fo:text-indent="0cm" style:auto-text-indent="false"'), text=tprops(16)))
 
     # ตาราง
     S.append(pstyle('TableText', parent='Standard', para=(
@@ -831,7 +831,7 @@ def paragraph_styles() -> str:
                     para='fo:text-align="center" fo:margin-top="1.6cm" fo:margin-bottom="0.6cm"',
                     text=tprops(16)))
     S.append(pstyle('CoverLogo2', parent='CoverLogo', master='PageCover',
-                    para=('fo:break-before="page" fo:text-align="center" fo:margin-top="2.2cm" '
+                    para=('fo:break-before="page" fo:text-align="center" fo:margin-top="1.6cm" '
                           'fo:margin-bottom="0.6cm"'), text=tprops(16)))
     S.append(pstyle('CoverBase', parent='Standard',
                     para=('fo:text-align="center" fo:text-indent="0cm" '
@@ -946,9 +946,6 @@ def build_styles_xml() -> str:
         '<style:style style:name="TableMain" style:family="table">'
         f'<style:table-properties style:width="{cm(TEXT_W)}" table:align="margins" '
         'style:writing-mode="lr-tb"/></style:style>'
-        '<style:style style:name="TableCallout" style:family="table">'
-        f'<style:table-properties style:width="{cm(TEXT_W)}" table:align="margins" '
-        'style:writing-mode="lr-tb"/></style:style>'
         '</office:styles>'
         f'<office:automatic-styles>{page_layouts()}</office:automatic-styles>'
         f'<office:master-styles>{master_pages()}</office:master-styles>'
@@ -966,8 +963,6 @@ def automatic_styles(doc: Doc) -> str:
         for k, w in enumerate(widths):
             s.append(f'<style:style style:name="{table_name}.Col{k}" style:family="table-column">'
                      f'<style:table-column-properties style:column-width="{cm(w)}"/></style:style>')
-    s.append('<style:style style:name="ColCallout" style:family="table-column">'
-             f'<style:table-column-properties style:column-width="{cm(TEXT_W)}"/></style:style>')
     s.append('<style:style style:name="RowKeep" style:family="table-row">'
              '<style:table-row-properties fo:keep-together="always"/></style:style>')
     cell_border = f'fo:border="0.5pt solid {COLOUR_RULE}"'
@@ -977,12 +972,6 @@ def automatic_styles(doc: Doc) -> str:
     s.append(f'<style:style style:name="CellBody" style:family="table-cell">'
              f'<style:table-cell-properties {cell_border} '
              'fo:padding="0.12cm 0.16cm" style:vertical-align="top"/></style:style>')
-    s.append(f'<style:style style:name="CellWarn" style:family="table-cell">'
-             f'<style:table-cell-properties fo:border-left="3pt solid {COLOUR_WARN}" '
-             f'fo:background-color="{COLOUR_WARN_BG}" fo:padding="0.25cm 0.35cm"/></style:style>')
-    s.append(f'<style:style style:name="CellTip" style:family="table-cell">'
-             f'<style:table-cell-properties fo:border-left="3pt solid {COLOUR_TIP}" '
-             f'fo:background-color="{COLOUR_TIP_BG}" fo:padding="0.25cm 0.35cm"/></style:style>')
     s.append('<style:style style:name="FrameFigure" style:family="graphic">'
              '<style:graphic-properties style:vertical-pos="top" style:vertical-rel="baseline" '
              'style:wrap="none" style:run-through="foreground"/></style:style>')
@@ -1133,7 +1122,7 @@ def render_preface(doc: Doc, section: dict) -> None:
             if m and len(m.group(1)) < 80:
                 doc.p('Signature', f'<text:span text:style-name="StrongChar">{e(m.group(1))}</text:span>')
             else:
-                doc.p('BodyText', inline(raw))
+                doc.p('PrefaceText', inline(raw))
         elif b['t'] == 'table':
             doc.table(b['rows'], None)
 
