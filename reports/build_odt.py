@@ -47,7 +47,7 @@ MONO = 'DejaVu Sans Mono'
 
 # --- ตัวเลขหน้ากระดาษ -------------------------------------------------------
 PAGE_W, PAGE_H = 21.0, 29.7
-M_LEFT, M_RIGHT, M_TOP, M_BOTTOM = 3.81, 2.54, 2.54, 2.54
+M_LEFT, M_RIGHT, M_TOP, M_BOTTOM = 3.0, 2.0, 2.5, 2.0   # มาตรฐานราชการไทย
 TEXT_W = PAGE_W - M_LEFT - M_RIGHT          # 14.65 cm
 PX2CM = 1 / (2 * 37.7955)                    # สมมติแคปหน้าจอ 2x DPR
 
