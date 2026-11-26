@@ -14,3 +14,8 @@ docs/.vitepress/dist/
 # Credentials ของ seed users (auto-generated)
 default_admin_credentials.txt
 *.credentials.txt
+
+# ผลลัพธ์ไบนารีจากการสร้างคู่มือ .odt (สร้างใหม่ได้ด้วย reports/build_odt.py)
+reports/คู่มือการใช้งานระบบ_PIRIvoice.odt
+reports/คู่มือการใช้งานระบบ_PIRIvoice.pdf
+reports/.~lock.*
