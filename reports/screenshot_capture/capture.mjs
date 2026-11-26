@@ -191,7 +191,7 @@ async function capture(browser, t) {
 }
 
 const statuses = []
-const list = TARGETS.filter((t) => (!single || t.file === single || t.file.endsWith(single)) && (!only || t.file.startsWith(only)))
+const list = TARGETS.filter((t) => (!single || t.file === single || t.file === single + '.webp' || t.file.endsWith(single)) && (!only || t.file.startsWith(only)))
 if (!list.length) {
   console.error('ไม่พบเป้าหมาย', { single, only })
   process.exit(1)
