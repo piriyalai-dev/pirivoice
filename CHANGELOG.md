@@ -127,7 +127,9 @@ commit แรก `1557490` 8 ส.ค. 2026 — Initial commit 99 ไฟล์ 15
 
 ---
 
-## [Unreleased] — รูปภาพใช้ได้ทุกส่วน — เรื่อง · บอร์ด · ประกาศ · กิจกรรม และโปรไฟล์
+## [Unreleased] — ยังไม่ตัดเวอร์ชัน
+
+## [2.5.0] — 2026-11-26 — รูปภาพใช้ได้ทุกส่วน — เรื่อง · บอร์ด · ประกาศ · กิจกรรม และโปรไฟล์
 
 **บริบท ณ ตอนนั้น** — v2.4.0 เก็บเลขเวอร์ชันและประวัติได้แล้ว แต่ระบบยัง **เก็บและแสดงรูปไม่ได้เลย** —
 เรื่องมีแต่ข้อความ บอร์ด ประกาศ กิจกรรมเป็นตัวหนังสือล้วน รูปโปรไฟล์เป็นตัวอักษรย่อ
@@ -1548,7 +1550,8 @@ backend เป็นเจ้าของฐานข้อมูลแต่เ
 
 ---
 
-[Unreleased]: https://github.com/piriyalai-dev/pirivoice/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/piriyalai-dev/pirivoice/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/piriyalai-dev/pirivoice/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/piriyalai-dev/pirivoice/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/piriyalai-dev/pirivoice/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/piriyalai-dev/pirivoice/compare/v2.1.1...v2.2.0
