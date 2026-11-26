@@ -689,5 +689,13 @@
   "file": "admin/member-roles.webp",
   "user": "e2eadm",
   "path": "/app/users"
+ },
+ {
+  "file": "admin/quiet-hours-settings.webp",
+  "user": "e2eadm",
+  "path": "/app/settings",
+  "wait": 3000,
+  "scrollToText": "ช่วงเวลาไม่ส่งแจ้งเตือน",
+  "scrollAdjust": -120
  }
 ]
