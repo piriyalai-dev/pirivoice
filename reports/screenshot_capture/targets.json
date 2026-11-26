@@ -1,0 +1,693 @@
+[
+ {
+  "file": "public/landing-hero.webp",
+  "anon": true,
+  "path": "/",
+  "height": 844,
+  "marks": [
+   {
+    "text": "เข้าสู่ระบบ",
+    "n": 1
+   },
+   {
+    "text": "ประกาศ",
+    "n": 2
+   },
+   {
+    "text": "แจ้งเรื่องเลย",
+    "n": 3
+   },
+   {
+    "text": "ดูรายงานสถิติ",
+    "n": 4
+   }
+  ]
+ },
+ {
+  "file": "public/landing-stats.webp",
+  "anon": true,
+  "path": "/",
+  "scrollToText": "รายงานสถิติสถานะปัจจุบัน",
+  "scrollAdjust": -120
+ },
+ {
+  "file": "public/landing-resolved.webp",
+  "anon": true,
+  "path": "/",
+  "scrollToText": "ผลลัพธ์ที่เกิดขึ้นจริง",
+  "scrollAdjust": -70,
+  "height": 900
+ },
+ {
+  "file": "public/login.webp",
+  "anon": true,
+  "path": "/login",
+  "wait": 2500,
+  "marks": [
+   {
+    "text": "เข้าสู่ระบบเลย",
+    "n": 1
+   }
+  ]
+ },
+ {
+  "file": "user/home.webp",
+  "user": "e2estu",
+  "path": "/app/home",
+  "marks": [
+   {
+    "text": "หน้าแรก",
+    "n": 1
+   },
+   {
+    "text": "เรื่อง",
+    "n": 2
+   },
+   {
+    "text": "บอร์ด",
+    "n": 3
+   },
+   {
+    "text": "กิจกรรม",
+    "n": 4
+   },
+   {
+    "text": "เพิ่มเติม",
+    "n": 5
+   },
+   {
+    "text": "กระดิ่งแจ้งเตือน",
+    "n": 6
+   }
+  ]
+ },
+ {
+  "file": "user/more.webp",
+  "user": "e2estu",
+  "path": "/app/more",
+  "marks": [
+   {
+    "text": "กิจกรรมของฉัน",
+    "n": 1
+   },
+   {
+    "text": "คู่มือการทำงาน",
+    "n": 2
+   },
+   {
+    "text": "คู่มือการใช้งาน",
+    "n": 3
+   },
+   {
+    "text": "โปรไฟล์",
+    "n": 4
+   },
+   {
+    "text": "ตั้งค่า",
+    "n": 5
+   },
+   {
+    "text": "ออกจากระบบ",
+    "n": 6
+   }
+  ]
+ },
+ {
+  "file": "user/notifications.webp",
+  "user": "e2estu",
+  "path": "/app/notifications"
+ },
+ {
+  "file": "user/change-password.webp",
+  "user": "e2estu",
+  "path": "/app/profile/password"
+ },
+ {
+  "file": "user/new-issue.webp",
+  "user": "e2estu",
+  "path": "/app/issues/new",
+  "marks": [
+   {
+    "text": "ถัดไป",
+    "n": 1
+   }
+  ]
+ },
+ {
+  "file": "user/my-issues.webp",
+  "user": "e2estu",
+  "path": "/app/issues/mine"
+ },
+ {
+  "file": "user/boards.webp",
+  "user": "e2estu",
+  "path": "/app/boards"
+ },
+ {
+  "file": "user/board-comment.webp",
+  "user": "e2estu",
+  "path": "/app/boards/3",
+  "marks": [
+   {
+    "text": "ส่ง",
+    "n": 1
+   },
+   {
+    "text": "ถ่ายรูป",
+    "n": 2
+   }
+  ]
+ },
+ {
+  "file": "user/events.webp",
+  "user": "e2estu",
+  "path": "/app/events"
+ },
+ {
+  "file": "user/events-list.webp",
+  "user": "e2estu",
+  "path": "/app/events"
+ },
+ {
+  "file": "user/profile.webp",
+  "user": "e2estu",
+  "path": "/app/profile"
+ },
+ {
+  "file": "user/profile-edit.webp",
+  "user": "e2estu",
+  "path": "/app/profile/edit"
+ },
+ {
+  "file": "user/playbooks.webp",
+  "user": "e2estu",
+  "path": "/app/playbooks"
+ },
+ {
+  "file": "user/playbook-reader.webp",
+  "user": "e2estu",
+  "path": "/app/playbooks/1"
+ },
+ {
+  "file": "user/activity.webp",
+  "user": "e2estu",
+  "path": "/app/me"
+ },
+ {
+  "file": "user/push-settings.webp",
+  "user": "e2estu",
+  "path": "/app/settings",
+  "scrollToText": "แจ้งเตือนถึงมือถือ",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "user/notification-settings.webp",
+  "user": "e2estu",
+  "path": "/app/settings",
+  "marks": [
+   {
+    "text": "เรื่องของฉัน",
+    "n": 1
+   },
+   {
+    "text": "เรื่องที่รับผิดชอบ",
+    "n": 2
+   },
+   {
+    "text": "บอร์ด",
+    "n": 3
+   },
+   {
+    "text": "จัดการรายงาน",
+    "n": 4
+   },
+   {
+    "text": "กิจกรรม",
+    "n": 5
+   }
+  ],
+  "scrollToText": "เลือกกลุ่มการแจ้งเตือน",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "user/quiet-hours.webp",
+  "user": "e2estu",
+  "path": "/app/settings",
+  "scrollToText": "ช่วงเวลาไม่ส่งแจ้งเตือน",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "user/home-shortcuts-card.webp",
+  "user": "e2estu",
+  "path": "/app/home",
+  "marks": [
+   {
+    "text": "โหวตที่ยังไม่โหวต",
+    "n": 1
+   },
+   {
+    "text": "บอร์ด",
+    "n": 2
+   },
+   {
+    "text": "สรุปเรื่องของฉัน",
+    "n": 3
+   }
+  ],
+  "scrollToText": "รอฉันตอบ",
+  "scrollAdjust": -60
+ },
+ {
+  "file": "user/issue-detail.webp",
+  "user": "e2estu",
+  "path": "/app/issues/34",
+  "wait": 4500
+ },
+ {
+  "file": "user/notifications-filter.webp",
+  "user": "e2estu",
+  "path": "/app/notifications",
+  "marks": [
+   {
+    "text": "เรื่องของฉัน",
+    "n": 1
+   },
+   {
+    "text": "บอร์ด",
+    "n": 2
+   },
+   {
+    "text": "กิจกรรม",
+    "n": 3
+   },
+   {
+    "text": "อ่านทั้งหมด",
+    "n": 4
+   }
+  ],
+  "click": [
+   "button[aria-label=\"ตัวเลือกอื่น\"]"
+  ]
+ },
+ {
+  "file": "user/new-issue-detail.webp",
+  "user": "e2estu",
+  "path": "/app/issues/new",
+  "marks": [
+   {
+    "text": "หัวข้อ",
+    "n": 1
+   },
+   {
+    "text": "รายละเอียด",
+    "n": 2
+   },
+   {
+    "text": "แนบรูปหลักฐาน",
+    "n": 3
+   },
+   {
+    "text": "ซ่อนชื่อฉัน (ไม่ระบุตัวตน)",
+    "n": 4
+   }
+  ],
+  "click": [
+   "text=ถัดไป"
+  ]
+ },
+ {
+  "file": "user/new-issue-send.webp",
+  "user": "e2estu",
+  "path": "/app/issues/new",
+  "marks": [
+   {
+    "text": "ดำเนินการปกติ",
+    "n": 1
+   },
+   {
+    "text": "โหวตสาธารณะ",
+    "n": 2
+   },
+   {
+    "text": "พูดคุยสาธารณะ",
+    "n": 3
+   },
+   {
+    "text": "ส่งเรื่อง",
+    "n": 4
+   }
+  ],
+  "click": [
+   "text=ถัดไป",
+   "text=ถัดไป"
+  ]
+ },
+ {
+  "file": "user/profile-stats.webp",
+  "user": "e2estu",
+  "path": "/app/profile",
+  "scrollToText": "สถิติ",
+  "scrollAdjust": -120
+ },
+ {
+  "file": "staff/received-issues.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/received",
+  "marks": [
+   {
+    "text": "ที่รับผิดชอบ",
+    "n": 1
+   },
+   {
+    "text": "รอรับ",
+    "n": 2
+   }
+  ]
+ },
+ {
+  "file": "staff/event-management.webp",
+  "user": "e2ehead",
+  "path": "/app/events/manage",
+  "marks": [
+   {
+    "text": "เผยแพร่แล้ว",
+    "n": 1
+   },
+   {
+    "text": "รายชื่อผู้สมัคร",
+    "n": 2
+   },
+   {
+    "text": "สร้างกิจกรรม",
+    "n": 3
+   }
+  ]
+ },
+ {
+  "file": "staff/event-create.webp",
+  "user": "e2ehead",
+  "path": "/app/events/new",
+  "marks": [
+   {
+    "text": "ชื่อกิจกรรม",
+    "n": 1
+   },
+   {
+    "text": "วันและเวลาจัด",
+    "n": 2
+   },
+   {
+    "text": "จำนวนที่นั่ง",
+    "n": 3
+   }
+  ]
+ },
+ {
+  "file": "staff/event-registrations.webp",
+  "user": "e2ehead",
+  "path": "/app/events/4/registrations",
+  "marks": [
+   {
+    "text": "เช็คอินแล้ว",
+    "n": 1
+   },
+   {
+    "text": "เช็คอิน",
+    "n": 2
+   },
+   {
+    "text": "สแกน",
+    "n": 3
+   }
+  ]
+ },
+ {
+  "file": "staff/checkin-scanner.webp",
+  "user": "e2ehead",
+  "path": "/app/events/4/check-in"
+ },
+ {
+  "file": "staff/announcements.webp",
+  "user": "e2ehead",
+  "path": "/app/announcements",
+  "marks": [
+   {
+    "text": "เพิ่มประกาศ",
+    "n": 1
+   },
+   {
+    "text": "ปลดระวางแล้ว",
+    "n": 2
+   },
+   {
+    "text": "แก้ไข",
+    "n": 3
+   },
+   {
+    "text": "ลบ",
+    "n": 4
+   }
+  ]
+ },
+ {
+  "file": "staff/moderation-queue.webp",
+  "user": "e2ehead",
+  "path": "/app/boards/reports",
+  "marks": [
+   {
+    "text": "รอจัดการ",
+    "n": 1
+   },
+   {
+    "text": "ทุกเหตุผล",
+    "n": 2
+   }
+  ]
+ },
+ {
+  "file": "staff/student-records.webp",
+  "user": "e2ehead",
+  "path": "/app/students",
+  "marks": [
+   {
+    "text": "เจ้าหน้าที่",
+    "n": 1
+   }
+  ]
+ },
+ {
+  "file": "staff/student-import.webp",
+  "user": "e2ehead",
+  "path": "/app/students/import",
+  "marks": [
+   {
+    "text": "ดาวน์โหลดไฟล์ตัวอย่าง",
+    "n": 1
+   }
+  ]
+ },
+ {
+  "file": "staff/student-moves.webp",
+  "user": "e2ehead",
+  "path": "/app/students/moves",
+  "marks": [
+   {
+    "text": "ย้ายทั้งห้อง",
+    "n": 1
+   },
+   {
+    "text": "เลือกทั้งหมด",
+    "n": 2
+   }
+  ]
+ },
+ {
+  "file": "staff/student-promote.webp",
+  "user": "e2ehead",
+  "path": "/app/students/promote",
+  "marks": [
+   {
+    "text": "ยังมีปีการศึกษาไม่ถึง 2 ปี",
+    "n": 1
+   },
+   {
+    "text": "ปีการศึกษา",
+    "n": 2
+   },
+   {
+    "text": "ประวัติการเลื่อนชั้น",
+    "n": 3
+   }
+  ]
+ },
+ {
+  "file": "staff/orphaned-empty.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/orphaned",
+  "marks": [
+   {
+    "text": "ไม่มีเรื่องค้าง",
+    "n": 1
+   }
+  ]
+ },
+ {
+  "file": "staff/student-reconciliation.webp",
+  "user": "e2ehead",
+  "path": "/app/students/reconciliation",
+  "marks": [
+   {
+    "text": "ยังเปรียบเทียบไม่ได้",
+    "n": 1
+   },
+   {
+    "text": "ยังไม่มีผลกระทบยอด",
+    "n": 2
+   }
+  ]
+ },
+ {
+  "file": "admin/dashboard-overview.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "marks": [
+   {
+    "text": "ภาพรวมทั้งโรงเรียน",
+    "n": 1
+   },
+   {
+    "text": "เรื่องทั้งหมด",
+    "n": 2
+   },
+   {
+    "text": "รอรับเรื่อง",
+    "n": 3
+   },
+   {
+    "text": "งานเกินเวลา",
+    "n": 4
+   }
+  ]
+ },
+ {
+  "file": "admin/users-list.webp",
+  "user": "e2eadm",
+  "path": "/app/users",
+  "marks": [
+   {
+    "text": "เจ้าหน้าที่",
+    "n": 1
+   },
+   {
+    "text": "เพิ่มผู้ใช้งาน",
+    "n": 2
+   }
+  ]
+ },
+ {
+  "file": "admin/audit-filters.webp",
+  "user": "e2eadm",
+  "path": "/app/audit-logs",
+  "marks": [
+   {
+    "text": "Action",
+    "n": 1
+   },
+   {
+    "text": "สถานะ",
+    "n": 2
+   },
+   {
+    "text": "จากวันที่",
+    "n": 3
+   }
+  ]
+ },
+ {
+  "file": "admin/audit-table.webp",
+  "user": "e2eadm",
+  "path": "/app/audit-logs"
+ },
+ {
+  "file": "admin/years-list.webp",
+  "user": "e2eadm",
+  "path": "/app/settings/years",
+  "marks": [
+   {
+    "text": "เพิ่มปีการศึกษา",
+    "n": 1
+   },
+   {
+    "text": "ขั้นต่อไปของการขึ้นปีใหม่",
+    "n": 2
+   },
+   {
+    "text": "ถูกลบ",
+    "n": 3
+   },
+   {
+    "text": "ปีปัจจุบัน",
+    "n": 4
+   },
+   {
+    "text": "แก้ไข",
+    "n": 5
+   }
+  ]
+ },
+ {
+  "file": "admin/year-new.webp",
+  "user": "e2eadm",
+  "path": "/app/settings/years/new",
+  "marks": [
+   {
+    "text": "ปีการศึกษา (พ.ศ.)",
+    "n": 1
+   },
+   {
+    "text": "ชื่อที่แสดง",
+    "n": 2
+   },
+   {
+    "text": "วันเปิด–วันสิ้นสุด",
+    "n": 3
+   },
+   {
+    "text": "ใช้เป็นปีปัจจุบัน",
+    "n": 4
+   },
+   {
+    "text": "บันทึก",
+    "n": 5
+   }
+  ]
+ },
+ {
+  "file": "admin/terms-list.webp",
+  "user": "e2eadm",
+  "path": "/app/settings/terms",
+  "marks": [
+   {
+    "text": "เพิ่มภาคเรียน",
+    "n": 1
+   },
+   {
+    "text": "ถูกลบ",
+    "n": 2
+   },
+   {
+    "text": "กำลังใช้อยู่",
+    "n": 3
+   },
+   {
+    "text": "ใช้เป็นภาคปัจจุบัน",
+    "n": 4
+   }
+  ]
+ },
+ {
+  "file": "admin/member-roles.webp",
+  "user": "e2eadm",
+  "path": "/app/users"
+ }
+]
