@@ -139,9 +139,11 @@ async function capture(browser, t) {
         let el = m.sel ? document.querySelector(m.sel) : null
         if (!el && m.selText) {
           const [tag, txt] = m.selText
-          const cands = Array.from(document.querySelectorAll(tag)).filter((e) =>
-            e.textContent?.includes(txt),
-          )
+          // เลือก element ที่ "ลึกที่สุด" — ไม่มีลูกชายที่ข้อความตรงกัน (กันวงกลมคร่อม wrapper)
+          const cands = Array.from(document.querySelectorAll(tag)).filter((e) => {
+            if (!e.textContent?.includes(txt)) return false
+            return !Array.from(e.children).some((c) => c.textContent?.includes(txt))
+          })
           cands.sort((a, b) => a.textContent.length - b.textContent.length)
           el = cands[0] || null
         }

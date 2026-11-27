@@ -428,7 +428,7 @@
   "marks": [
    {
     "selText": [
-     "button,div",
+     "button",
      "รอจัดการ"
     ],
     "n": 1,
@@ -436,10 +436,7 @@
     "radius": 10
    },
    {
-    "selText": [
-     "div",
-     "ทุกเหตุผล"
-    ],
+    "sel": "select",
     "n": 2,
     "box": true,
     "radius": 8
@@ -842,13 +839,39 @@
   "path": "/app/boards/reports",
   "wait": 3200,
   "click": [
-   "text=ซ่อนแล้ว"
+   "text=ไม่ดำเนินการ"
   ],
   "replace": [
    [
     "E2E e2estu",
     "นักเรียน ม.4/1"
    ]
+  ],
+  "marks": [
+   {
+    "selText": [
+     "button",
+     "ไม่ดำเนินการ"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "span",
+     "ไม่ดำเนินการ"
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "text": "อื่นๆ",
+    "n": 3,
+    "box": true,
+    "radius": 8
+   }
   ]
  },
  {
