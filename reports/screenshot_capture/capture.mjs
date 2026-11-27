@@ -106,14 +106,18 @@ async function capture(browser, t) {
     }
   }
 
+  let scroll_found = true
   if (t.scrollToText) {
-    await page.evaluate((txt) => {
+    scroll_found = await page.evaluate((txt) => {
       const all = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,div,span'))
       const el =
         all.find((e) => e.textContent?.trim() === txt) ||
         all.find((e) => e.children.length === 0 && e.textContent?.includes(txt))
-      el?.scrollIntoView({ block: 'start' })
+      if (!el) return false
+      el.scrollIntoView({ block: 'start' })
+      return true
     }, t.scrollToText)
+    if (!scroll_found) console.error(`  [${t.file}] ไม่พบจุดเลื่อน: ${t.scrollToText}`)
     await page.waitForTimeout(700)
     if (t.scrollAdjust) {
       await page.evaluate((dy) => window.scrollBy(0, dy), t.scrollAdjust)
@@ -180,7 +184,7 @@ async function capture(browser, t) {
     if (missing.length) console.error(`  [${t.file}] mark ไม่พบ: ${missing.join(' · ')}`)
   }
 
-  const status = { file: t.file, missing: missing_marks, ok: missing_marks.length === 0 }
+  const status = { file: t.file, missing: missing_marks, scroll: scroll_found, ok: missing_marks.length === 0 && scroll_found }
   statuses.push(status)
 
   fs.mkdirSync(path.dirname(path.join(OUT, t.file)), { recursive: true })
