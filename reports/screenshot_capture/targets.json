@@ -333,7 +333,35 @@
   "file": "staff/event-management.webp",
   "user": "e2ehead",
   "path": "/app/events/manage",
-  "wait": 3200
+  "wait": 3200,
+  "scrollToText": "กิจกรรมกีฬาสี",
+  "scrollAdjust": -220,
+  "marks": [
+   {
+    "selText": [
+     "span",
+     "เผยแพร่แล้ว"
+    ],
+    "n": 1
+   },
+   {
+    "selText": [
+     "button",
+     "รายชื่อผู้สมัคร"
+    ],
+    "n": 2
+   },
+   {
+    "sel": "[aria-label^='ตัวเลือกอื่นของ']",
+    "n": 3
+   },
+   {
+    "sel": "[aria-label='สร้างกิจกรรม']",
+    "n": 4,
+    "box": true,
+    "radius": 10
+   }
+  ]
  },
  {
   "file": "staff/event-create.webp",
@@ -901,8 +929,34 @@
   "user": "e2ehead",
   "path": "/app/students/import",
   "wait": 3000,
+  "scrollToText": "อัปโหลดไฟล์",
+  "scrollAdjust": -160
+ },
+ {
+  "file": "staff/event-menu.webp",
+  "user": "e2ehead",
+  "path": "/app/events/manage",
+  "wait": 3200,
   "click": [
-   "text=อัปโหลดเข้า Queue"
+   "[aria-label^='ตัวเลือกอื่นของ']"
+  ],
+  "marks": [
+   {
+    "sel": "[aria-label^='ตัวเลือกอื่นของ']",
+    "n": 1
+   },
+   {
+    "text": "สแกนเช็คอิน",
+    "n": 2
+   },
+   {
+    "text": "แก้ไข",
+    "n": 3
+   },
+   {
+    "text": "ยกเลิกกิจกรรม",
+    "n": 4
+   }
   ]
  }
 ]
