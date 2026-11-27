@@ -13,7 +13,7 @@
 | สารบัญ / ภาพ / ตาราง | 313 / 98 / 66 รายการ (อัปเดตอัตโนมัติ) |
 | กล่องหมายเหตุ | ย่อหน้าพื้นขาว + ตัวหนา (ไม่มีแถบสี) |
 | ข้อความใน `` `...` `` | แสดงเป็น **ตัวหนา** (ไม่ใช้ monospace) |
-| รูปแคปที่แคปใหม่ | **73 / 86** |
+| รูปแคปที่แคปใหม่ | **76 / 86** |
 | ไฟล์ส่งมอบ | `reports/คู่มือการใช้งานระบบ_PIRIvoice.odt` + `.pdf` · สำเนาใน `~/reports/` |
 
 ## 2. เครื่องมือแคป (ใช้ต่อ)
@@ -31,21 +31,19 @@ CHROME_PATH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | ta
 ความสามารถของ target:
 `user` · `anon` · `path` · `width` (760 สำหรับแอดมิน) · `height` · `wait`
 `click` (`text=`, `button:has-text()`, `js:ข้อความ`, ลงท้าย `|last`) ·
-`scrollToText` + `scrollAdjust` · `replace` · `setToken`
-`marks`: `{text|sel|selText|selN, n, box, radius, at}`
+`type` · `setFiles` · `scrollFirst` · `scrollToText` + `scrollAdjust` · `replace` · `setToken`
+`marks`: `{text|sel|selText|selN|selAll, n, box, radius, at, within}`
+(`at`: `left` · `outside-left` · `outside-right` — ใช้กับข้อความล้วนไม่ให้วงทับตัวอักษร)
 
-## 3. เหลือ 13 รูป — รายละเอียดต่อรูป
+## 3. เหลือ 10 รูป — รายละเอียดต่อรูป
 
 > ✅ **staff (5) เสร็จแล้ว 27 พ.ย. 2026** — `issue-add-step` · `issue-extend` · `event-management`
 > · `announcement-new` · `student-import-upload` แคปใหม่ตามเลขในบท 12.3 / 12.7 / 11.2+13.1 / 14.2 / 17.2
 > (เครื่องแคปเพิ่ม `type` · `setFiles` · `within` · `scrollFirst` แล้ว — ดู README)
-
-### admin (3)
-| รูป | ตัวบล็อก | แนวทาง |
-|---|---|---|
-| `audit-table` | UI แสดง **การ์ด ไม่มีตาราง/หัวคอลัมน์** (ลอง 1200px แล้ว) | ตัดสินใจ: ปรับบท 23.2 ให้ตรง UI หรือเปลี่ยนภาพ |
-| `quiet-hours-settings` | วงกลม 5 (สวิตช์เปิดใช้) | mark ที่ป้าย/สวิตช์ในหัวการ์ด |
-| `year-new` | วงกลม 5 (ปุ่มบันทึก) | หาชื่อปุ่มจริง (อาจเป็น "บันทึกข้อมูล") |
+>
+> ✅ **admin (3) เสร็จแล้ว 27 พ.ย. 2026** — `audit-table` (UI เป็น **การ์ด** ไม่ใช่ตาราง ⇒ ปรับบท 23
+> ทั้งบทให้ตรง: 5 จุด = เวลา/ผู้ใช้/ป้ายการกระทำ/ข้อมูลอ้างอิง/รายละเอียด) · `quiet-hours-settings`
+> (วง 5 จุด รวมสวิตช์ `button[role=switch]`) · `year-new` (ปุ่มจริงคือ **“เพิ่มปีการศึกษา”** ⇒ แก้บท 25.3 ด้วย)
 
 ### user (10 = 8 หน้าเว็บ + 2 OS)
 | รูป | ตัวบล็อก |

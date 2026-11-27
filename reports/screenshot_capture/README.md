@@ -31,7 +31,7 @@ node reports/screenshot_capture/capture.mjs --all --only=user/  # เฉพา�
 | `replace` | แทนข้อความบนหน้า — โดเมนทดสอบ/ชื่อจริง/อีโมจิที่ขึ้นเป็นกล่อง |
 | `scrollToText` + `scrollAdjust` | เลื่อนไปยังหัวข้อที่ต้องการ — `scrollAdjust` ปรับตัวเลื่อนของ `<main>` (ไม่ใช่ window) |
 | `scrollFirst` | `true` = เลื่อน **ก่อน** กด (`click`) — ใช้เมื่อกล่อง Swal จะบังเนื้อหาที่จะโชว์ |
-| `marks` | วงกลม/กรอบสีแดง: `{text|sel|selText|selN, n, box, radius, at, within}` · `within` = selector ของกล่องที่จำกัดการค้นหา (เช่น `div.fixed.inset-0.z-50` ของ modal) |
+| `marks` | วงกลม/กรอบสีแดง: `{text|sel|selText|selN|selAll, n, box, radius, at, within}` · `selAll` = ล้อมทุก element ที่ตรงด้วยกรอบเดียว (เช่น `#year-start, #year-end`) · `within` = selector ของกล่องที่จำกัดการค้นหา (เช่น `div.fixed.inset-0.z-50` ของ modal) · `at` = `left` / `outside-left` / `outside-right` (ค่าหลังใช้กับข้อความล้วน เพื่อให้เลขอยู่นอกตัวอักษร) |
 | `setToken` | แทนข้อความรหัสบัตรเช็คอินให้สั้นอ่านง่าย |
 
 ## ข้อควรรู้
