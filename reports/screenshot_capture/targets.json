@@ -444,12 +444,7 @@
   "file": "staff/student-import.webp",
   "user": "e2ehead",
   "path": "/app/students/import",
-  "marks": [
-   {
-    "text": "ดาวน์โหลดไฟล์ตัวอย่าง",
-    "n": 1
-   }
-  ]
+  "wait": 3000
  },
  {
   "file": "staff/student-moves.webp",
@@ -696,7 +691,7 @@
   "path": "/app/issues/39",
   "wait": 3200,
   "click": [
-   "text=เพิ่มขั้นตอน"
+   "text=เพิ่มขั้นตอน|last"
   ]
  },
  {
