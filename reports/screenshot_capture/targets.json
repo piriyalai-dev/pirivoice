@@ -666,19 +666,19 @@
  {
   "file": "staff/issue-pending.webp",
   "user": "e2ehead",
-  "path": "/app/issues/34",
+  "path": "/app/issues/38",
   "wait": 3200
  },
  {
   "file": "staff/issue-in-progress.webp",
   "user": "e2ehead",
-  "path": "/app/issues/36",
+  "path": "/app/issues/39",
   "wait": 3200
  },
  {
   "file": "staff/issue-escalated.webp",
   "user": "e2ehead",
-  "path": "/app/issues/15",
+  "path": "/app/issues/40",
   "wait": 3200
  },
  {
@@ -693,7 +693,7 @@
  {
   "file": "staff/issue-add-step.webp",
   "user": "e2ehead",
-  "path": "/app/issues/36",
+  "path": "/app/issues/39",
   "wait": 3200,
   "click": [
    "text=เพิ่มขั้นตอน"
@@ -731,10 +731,10 @@
  {
   "file": "staff/issue-accept-dialog.webp",
   "user": "e2ehead",
-  "path": "/app/issues/26",
+  "path": "/app/issues/38",
   "wait": 3200,
   "click": [
-   "text=รับเรื่อง"
+   "text=รับเรื่อง + ตั้งเวลา"
   ]
  },
  {
@@ -808,5 +808,31 @@
   "user": "e2estu",
   "path": "/app/events/4",
   "wait": 3200
+ },
+ {
+  "file": "staff/announcement-new.webp",
+  "user": "e2ehead",
+  "path": "/app/announcements",
+  "wait": 3000,
+  "click": [
+   "text=เพิ่มประกาศ"
+  ]
+ },
+ {
+  "file": "staff/moderation-processed.webp",
+  "user": "e2ehead",
+  "path": "/app/boards/reports",
+  "wait": 3200,
+  "click": [
+   "text=จัดการแล้ว"
+  ]
+ },
+ {
+  "file": "staff/event-checkin-code.webp",
+  "user": "e2ehead",
+  "path": "/app/events/4",
+  "wait": 3200,
+  "scrollToText": "รหัสเช็คอิน",
+  "scrollAdjust": -140
  }
 ]

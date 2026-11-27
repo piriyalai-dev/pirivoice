@@ -113,7 +113,8 @@ def inline(text: str) -> str:
     out = []
     for part in re.split(r'(`[^`]+`)', text):
         if len(part) > 2 and part.startswith('`') and part.endswith('`'):
-            out.append(f'<text:span text:style-name="CodeChar">{part[1:-1]}</text:span>')
+            # ข้อความใน `...` ให้แสดงเป็นตัวหนาธรรมดา (ไม่ใช้ฟอนต์ monospace/พื้นเทา)
+            out.append(f'<text:span text:style-name="StrongChar">{part[1:-1]}</text:span>')
             continue
         for piece in re.split(r'(\*\*.+?\*\*)', part):
             if len(piece) > 4 and piece.startswith('**') and piece.endswith('**'):
