@@ -585,23 +585,99 @@
   "path": "/app/audit-logs",
   "marks": [
    {
-    "text": "Action",
-    "n": 1
+    "selText": [
+     "div",
+     "การกระทำ"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 6
    },
    {
-    "text": "สถานะ",
-    "n": 2
+    "selText": [
+     "*",
+     "สถานะ"
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 6
    },
    {
-    "text": "จากวันที่",
-    "n": 3
+    "sel": "input[placeholder*='ผู้ทำ']",
+    "n": 3,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "selText": [
+     "*",
+     "ตั้งแต่"
+    ],
+    "n": 4,
+    "box": true,
+    "radius": 6
    }
-  ]
+  ],
+  "wait": 3500
  },
  {
   "file": "admin/audit-table.webp",
   "user": "e2eadm",
-  "path": "/app/audit-logs"
+  "path": "/app/audit-logs",
+  "wait": 3500,
+  "scrollToText": "เวลา",
+  "scrollAdjust": -260,
+  "marks": [
+   {
+    "selText": [
+     "th",
+     "เวลา"
+    ],
+    "n": 1
+   },
+   {
+    "selText": [
+     "th",
+     "ผู้ใช้"
+    ],
+    "n": 2
+   },
+   {
+    "selText": [
+     "th",
+     "ห้อง"
+    ],
+    "n": 3
+   },
+   {
+    "selText": [
+     "th",
+     "การกระทำ"
+    ],
+    "n": 4
+   },
+   {
+    "selText": [
+     "th",
+     "ข้อมูล"
+    ],
+    "n": 5
+   },
+   {
+    "selText": [
+     "th",
+     "สถานะ"
+    ],
+    "n": 6
+   },
+   {
+    "selText": [
+     "th",
+     "ไอพี"
+    ],
+    "n": 7
+   }
+  ]
  },
  {
   "file": "admin/years-list.webp",
@@ -636,26 +712,44 @@
   "path": "/app/settings/years/new",
   "marks": [
    {
-    "text": "ปีการศึกษา (พ.ศ.)",
+    "selText": [
+     "label",
+     "ปีการศึกษา (พ.ศ.)"
+    ],
     "n": 1
    },
    {
-    "text": "ชื่อที่แสดง",
+    "selText": [
+     "label",
+     "ชื่อที่แสดง"
+    ],
     "n": 2
    },
    {
-    "text": "วันเปิด–วันสิ้นสุด",
+    "selText": [
+     "label",
+     "วันเปิด"
+    ],
     "n": 3
    },
    {
-    "text": "ใช้เป็นปีปัจจุบัน",
+    "selText": [
+     "*",
+     "ใช้เป็นปีปัจจุบัน"
+    ],
     "n": 4
    },
    {
-    "text": "บันทึก",
-    "n": 5
+    "selText": [
+     "button",
+     "บันทึก"
+    ],
+    "n": 5,
+    "box": true,
+    "radius": 10
    }
-  ]
+  ],
+  "wait": 3500
  },
  {
   "file": "admin/terms-list.webp",
