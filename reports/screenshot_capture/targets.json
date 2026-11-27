@@ -418,14 +418,37 @@
   "file": "staff/moderation-queue.webp",
   "user": "e2ehead",
   "path": "/app/boards/reports",
+  "wait": 3200,
+  "replace": [
+   [
+    "E2E e2estu",
+    "นักเรียน ม.4/1"
+   ]
+  ],
   "marks": [
    {
-    "text": "รอจัดการ",
-    "n": 1
+    "selText": [
+     "button,div",
+     "รอจัดการ"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 10
    },
    {
-    "text": "ทุกเหตุผล",
-    "n": 2
+    "selText": [
+     "div",
+     "ทุกเหตุผล"
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "sel": "input[placeholder*='ค้นหา']",
+    "n": 3,
+    "box": true,
+    "radius": 8
    }
   ]
  },
@@ -819,7 +842,13 @@
   "path": "/app/boards/reports",
   "wait": 3200,
   "click": [
-   "text=จัดการแล้ว"
+   "text=ซ่อนแล้ว"
+  ],
+  "replace": [
+   [
+    "E2E e2estu",
+    "นักเรียน ม.4/1"
+   ]
   ]
  },
  {
@@ -828,6 +857,14 @@
   "path": "/app/events/4",
   "wait": 3200,
   "scrollToText": "รหัสเช็คอิน",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "staff/moderation-board.webp",
+  "user": "e2ehead",
+  "path": "/app/boards/4",
+  "wait": 3200,
+  "scrollToText": "ความคิดเห็น",
   "scrollAdjust": -140
  }
 ]

@@ -139,7 +139,11 @@ async function capture(browser, t) {
         let el = m.sel ? document.querySelector(m.sel) : null
         if (!el && m.selText) {
           const [tag, txt] = m.selText
-          el = Array.from(document.querySelectorAll(tag)).find((e) => e.textContent?.includes(txt))
+          const cands = Array.from(document.querySelectorAll(tag)).filter((e) =>
+            e.textContent?.includes(txt),
+          )
+          cands.sort((a, b) => a.textContent.length - b.textContent.length)
+          el = cands[0] || null
         }
         if (!el && m.text) {
           const cands = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,span,div,button'))
