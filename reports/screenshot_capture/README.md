@@ -25,7 +25,8 @@ node reports/screenshot_capture/capture.mjs --all --only=user/  # เฉพา�
 | `user` | บัญชี (`e2estu` / `e2ehead` / `e2eadm`) หรือ `anon: true` |
 | `path` | เส้นทาง เช่น `/app/home` |
 | `height` | ความสูงวิวพอร์ต (หน้าฟอร์มใช้ 950–1350) |
-| `click` | selector ที่กดก่อนแคป (เช่น เลือกหมวดก่อนกด "ถัดไป") |
+| `click` | selector ที่กดก่อนแคป (เช่น เลือกหมวดก่อนกด "ถัดไป") — กด div ได้ (Playwright `text=` ครอบ div ด้วย) |
+| `clickAfter` | selector ที่กด **หลัง** `type`/`setFiles` (เช่น ปุ่ม "ถัดไป" ที่กดได้ต่อเมื่อกรอกครบ) |
 | `type` | `[[selector, ข้อความ]]` กรอกช่องก่อนแคป — ทำงาน **หลัง** `click` (ฟอร์มที่เปิดด้วยคลิกจึงกรอกได้) |
 | `setFiles` | `[[selector, path]]` เลือกไฟล์ให้ `input[type=file]` (Playwright setInputFiles) |
 | `replace` | แทนข้อความบนหน้า — โดเมนทดสอบ/ชื่อจริง/อีโมจิที่ขึ้นเป็นกล่อง |

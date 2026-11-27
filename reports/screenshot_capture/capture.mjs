@@ -175,6 +175,18 @@ async function capture(browser, t) {
     }
   }
 
+  // `clickAfter` — คลิกหลังกรอกฟอร์ม (เช่น กด "ถัดไป" ที่ต้องมีข้อความก่อนปุ่มจะกดได้)
+  for (const sel of t.clickAfter || []) {
+    try {
+      const [q, mode] = sel.endsWith('|last') ? [sel.slice(0, -5), 'last'] : [sel, 'first']
+      const loc = page.locator(q)
+      await (mode === 'last' ? loc.last() : loc.first()).click({ timeout: 5000 })
+      await page.waitForTimeout(900)
+    } catch (e) {
+      console.error(`  [${t.file}] clickAfter failed:`, sel)
+    }
+  }
+
   if (!t.scrollFirst && t.scrollToText) scroll_found = await doScroll()
 
   let missing_marks = []
@@ -198,9 +210,12 @@ async function capture(browser, t) {
         }
         if (!el && m.selText) {
           const [tag, txt] = m.selText
-          // เลือก element ที่ "ลึกที่สุด" — ไม่มีลูกชายที่ข้อความตรงกัน (กันวงกลมคร่อม wrapper)
+          // เลือก element ที่ "ลึกที่สุด" — แต่เฉพาะแท็กครอบแบบ div/span
+          // (ปุ่ม/ลิงก์มักมี <span> ข้อความอยู่ข้างใน — ห้ามตัดทิ้ง ไม่งั้นหาไม่เจอ)
+          const wrapperLike = tag === 'div' || tag === 'span' || tag === '*'
           const cands = Array.from(root.querySelectorAll(tag)).filter((e) => {
             if (!e.textContent?.includes(txt)) return false
+            if (!wrapperLike) return true
             return !Array.from(e.children).some((c) => c.textContent?.includes(txt))
           })
           cands.sort((a, b) => a.textContent.length - b.textContent.length)
