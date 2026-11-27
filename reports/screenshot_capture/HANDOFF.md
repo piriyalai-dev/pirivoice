@@ -13,7 +13,7 @@
 | สารบัญ / ภาพ / ตาราง | 313 / 98 / 66 รายการ (อัปเดตอัตโนมัติ) |
 | กล่องหมายเหตุ | ย่อหน้าพื้นขาว + ตัวหนา (ไม่มีแถบสี) |
 | ข้อความใน `` `...` `` | แสดงเป็น **ตัวหนา** (ไม่ใช้ monospace) |
-| รูปแคปที่แคปใหม่ | **68 / 86** |
+| รูปแคปที่แคปใหม่ | **73 / 86** |
 | ไฟล์ส่งมอบ | `reports/คู่มือการใช้งานระบบ_PIRIvoice.odt` + `.pdf` · สำเนาใน `~/reports/` |
 
 ## 2. เครื่องมือแคป (ใช้ต่อ)
@@ -34,16 +34,11 @@ CHROME_PATH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | ta
 `scrollToText` + `scrollAdjust` · `replace` · `setToken`
 `marks`: `{text|sel|selText|selN, n, box, radius, at}`
 
-## 3. เหลือ 18 รูป — รายละเอียดต่อรูป
+## 3. เหลือ 13 รูป — รายละเอียดต่อรูป
 
-### staff (5)
-| รูป | ตัวบล็อก | แนวทาง |
-|---|---|---|
-| `issue-add-step` | ปุ่ม "เพิ่มขั้นตอน" อยู่ในแผง | เปิดแผงตัวเลือกก่อน (`js:`/aria) แล้วกด |
-| `issue-extend` | ไม่มีปุ่มขยายเวลาบนหน้า | ตรวจว่าอยู่ในเมนูนับถอยหลังหรือไม่มีจริง → ปรับบท |
-| `event-management` | วงกลม 4 (FAB "สร้างกิจกรรม") เป็น element ขนาดศูนย์ | หาคลาสของ FAB (`fixed bottom`) แล้ว mark ตรง ๆ |
-| `announcement-new` | บทอ้าง 6 จุด แต่ 4 จุดแรกไม่มีป้ายใน label list | เปิด DOM กล่อง "เพิ่มประกาศ" แล้วกำหนด marks |
-| `student-import-upload` | ต้องเลือกไฟล์ก่อนถึงเข้าขั้นอัปโหลด | ใช้ `input[type=file]` setInputFiles หรือแคปเฉพาะโซนลากวาง |
+> ✅ **staff (5) เสร็จแล้ว 27 พ.ย. 2026** — `issue-add-step` · `issue-extend` · `event-management`
+> · `announcement-new` · `student-import-upload` แคปใหม่ตามเลขในบท 12.3 / 12.7 / 11.2+13.1 / 14.2 / 17.2
+> (เครื่องแคปเพิ่ม `type` · `setFiles` · `within` · `scrollFirst` แล้ว — ดู README)
 
 ### admin (3)
 | รูป | ตัวบล็อก | แนวทาง |

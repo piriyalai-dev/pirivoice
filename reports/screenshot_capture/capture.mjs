@@ -97,6 +97,39 @@ async function capture(browser, t) {
     }, t.setToken)
   }
 
+  const doScroll = async () => {
+    const found = await page.evaluate(
+      ([txt, dy]) => {
+        const all = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,div,span,label,li,a'))
+        const el =
+          all.find((e) => e.textContent?.trim() === txt) ||
+          all.find((e) => e.children.length === 0 && e.textContent?.includes(txt))
+        if (!el) return false
+        el.scrollIntoView({ block: 'start' })
+        if (dy) {
+          // ⚠️ หน้าแอปเลื่อนใน <main> ไม่ใช่ window ⇒ ต้องปรับตัวที่เลื่อนได้จริง
+          let sc = el.parentElement
+          while (sc && sc !== document.body) {
+            const oy = getComputedStyle(sc).overflowY
+            if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight) break
+            sc = sc.parentElement
+          }
+          if (sc && sc !== document.body) sc.scrollBy(0, dy)
+          else window.scrollBy(0, dy)
+        }
+        return true
+      },
+      [t.scrollToText, t.scrollAdjust || 0],
+    )
+    if (!found) console.error(`  [${t.file}] ไม่พบจุดเลื่อน: ${t.scrollToText}`)
+    await page.waitForTimeout(700)
+    return found
+  }
+
+  // `scrollFirst` — เลื่อนหน้าก่อนกด (เช่น หลบเนื้อหาที่จะอยู่หลังกล่อง Swal)
+  let scroll_found = true
+  if (t.scrollFirst && t.scrollToText) scroll_found = await doScroll()
+
   for (const sel of t.click || []) {
     try {
       if (sel.startsWith('js:')) {
@@ -121,24 +154,26 @@ async function capture(browser, t) {
     }
   }
 
-  let scroll_found = true
-  if (t.scrollToText) {
-    scroll_found = await page.evaluate((txt) => {
-      const all = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,div,span'))
-      const el =
-        all.find((e) => e.textContent?.trim() === txt) ||
-        all.find((e) => e.children.length === 0 && e.textContent?.includes(txt))
-      if (!el) return false
-      el.scrollIntoView({ block: 'start' })
-      return true
-    }, t.scrollToText)
-    if (!scroll_found) console.error(`  [${t.file}] ไม่พบจุดเลื่อน: ${t.scrollToText}`)
-    await page.waitForTimeout(700)
-    if (t.scrollAdjust) {
-      await page.evaluate((dy) => window.scrollBy(0, dy), t.scrollAdjust)
-      await page.waitForTimeout(500)
+  // กรอก/เลือกไฟล์ "หลัง" คลิก — ฟอร์มที่เปิดด้วยคลิกต้องอยู่ใน DOM ก่อนถึงจะกรอกได้
+  for (const [sel, text] of t.type || []) {
+    try {
+      await page.locator(sel).first().fill(text, { timeout: 5000 })
+      await page.waitForTimeout(300)
+    } catch (e) {
+      console.error(`  [${t.file}] type failed:`, sel)
     }
   }
+
+  for (const [sel, file] of t.setFiles || []) {
+    try {
+      await page.locator(sel).first().setInputFiles(file, { timeout: 5000 })
+      await page.waitForTimeout(500)
+    } catch (e) {
+      console.error(`  [${t.file}] setFiles failed:`, sel, e.message)
+    }
+  }
+
+  if (!t.scrollFirst && t.scrollToText) scroll_found = await doScroll()
 
   let missing_marks = []
   if (t.marks?.length) {
@@ -149,16 +184,18 @@ async function capture(browser, t) {
       const RED = '#e11d48'
       const miss = []
       for (const m of marks) {
-        let el = m.sel ? document.querySelector(m.sel) : null
+        // `within` — จำกัดการค้นหาไว้ในกล่อง/แผ่นที่เปิดอยู่ (กันชนกับของที่ซ่อนอยู่ข้างหลัง)
+        const root = (m.within && document.querySelector(m.within)) || document
+        let el = m.sel ? root.querySelector(m.sel) : null
         if (!el && m.selN) {
           // เลือกตามแท็ก + ลำดับ (เช่น select ตัวที่ 2 ของหน้า)
           const [tag, idx] = m.selN
-          el = document.querySelectorAll(tag)[idx] || null
+          el = root.querySelectorAll(tag)[idx] || null
         }
         if (!el && m.selText) {
           const [tag, txt] = m.selText
           // เลือก element ที่ "ลึกที่สุด" — ไม่มีลูกชายที่ข้อความตรงกัน (กันวงกลมคร่อม wrapper)
-          const cands = Array.from(document.querySelectorAll(tag)).filter((e) => {
+          const cands = Array.from(root.querySelectorAll(tag)).filter((e) => {
             if (!e.textContent?.includes(txt)) return false
             return !Array.from(e.children).some((c) => c.textContent?.includes(txt))
           })
@@ -166,7 +203,7 @@ async function capture(browser, t) {
           el = cands[0] || null
         }
         if (!el && m.text) {
-          const cands = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,span,div,button'))
+          const cands = Array.from(root.querySelectorAll('h1,h2,h3,h4,p,span,div,button'))
           el = cands.find((e) => e.textContent?.trim() === m.text) || null
           if (!el) {
             // แผนสำรอง: จับแบบ "มีข้อความนี้อยู่" แล้วเลือก element ที่เล็กที่สุด
