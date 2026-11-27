@@ -4,22 +4,44 @@
   "anon": true,
   "path": "/",
   "height": 844,
+  "wait": 4000,
   "marks": [
    {
-    "text": "เข้าสู่ระบบ",
-    "n": 1
+    "selText": [
+     "button",
+     "เข้าสู่ระบบ"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 10,
+    "within": "header"
    },
    {
-    "text": "ประกาศ",
-    "n": 2
+    "selText": [
+     "button",
+     "ประกาศ:"
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 12
    },
    {
-    "text": "แจ้งเรื่องเลย",
-    "n": 3
+    "selText": [
+     "button",
+     "แจ้งเรื่องเลย"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 12
    },
    {
-    "text": "ดูรายงานสถิติ",
-    "n": 4
+    "selText": [
+     "button",
+     "ดูรายงานสถิติ"
+    ],
+    "n": 4,
+    "box": true,
+    "radius": 12
    }
   ]
  },
@@ -43,11 +65,34 @@
   "file": "public/login.webp",
   "anon": true,
   "path": "/login",
-  "wait": 2500,
+  "wait": 3000,
   "marks": [
    {
-    "text": "เข้าสู่ระบบเลย",
-    "n": 1
+    "sel": "input[autocomplete='username']",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "input[autocomplete='current-password']",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "button",
+     "เข้าสู่ระบบเลย"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "div.border-l-brand",
+    "n": 4,
+    "box": true,
+    "radius": 10
    }
   ]
  },
