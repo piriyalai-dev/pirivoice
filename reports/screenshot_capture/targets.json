@@ -185,7 +185,8 @@
  {
   "file": "user/playbook-reader.webp",
   "user": "e2estu",
-  "path": "/app/playbooks/1"
+  "path": "/app/playbooks/vol1",
+  "wait": 3200
  },
  {
   "file": "user/activity.webp",
@@ -253,8 +254,9 @@
     "n": 3
    }
   ],
-  "scrollToText": "รอฉันตอบ",
-  "scrollAdjust": -60
+  "scrollToText": "ทางลัด",
+  "scrollAdjust": -120,
+  "wait": 3200
  },
  {
   "file": "user/issue-detail.webp",
@@ -285,8 +287,9 @@
    }
   ],
   "click": [
-   "button[aria-label=\"ตัวเลือกอื่น\"]"
-  ]
+   "[aria-label=\"กรองตามกลุ่ม และอ่านทั้งหมด\"]"
+  ],
+  "wait": 3000
  },
  {
   "file": "user/new-issue-detail.webp",
@@ -1146,5 +1149,15 @@
   "click": [
    "js:ขยายเวลา"
   ]
+ },
+ {
+  "file": "user/my-issues-filter.webp",
+  "user": "e2estu",
+  "path": "/app/issues/mine",
+  "wait": 3000,
+  "click": [
+   "text=กรอง"
+  ],
+  "marks": []
  }
 ]
