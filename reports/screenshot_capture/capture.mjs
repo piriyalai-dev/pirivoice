@@ -99,7 +99,9 @@ async function capture(browser, t) {
 
   for (const sel of t.click || []) {
     try {
-      await page.locator(sel).first().click({ timeout: 5000 })
+      const [q, mode] = sel.endsWith('|last') ? [sel.slice(0, -5), 'last'] : [sel, 'first']
+      const loc = page.locator(q)
+      await (mode === 'last' ? loc.last() : loc.first()).click({ timeout: 5000 })
       await page.waitForTimeout(900)
     } catch (e) {
       console.error(`  [${t.file}] click failed:`, sel)
