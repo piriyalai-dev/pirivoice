@@ -697,5 +697,79 @@
   "wait": 3000,
   "scrollToText": "ช่วงเวลาไม่ส่งแจ้งเตือน",
   "scrollAdjust": -120
+ },
+ {
+  "file": "staff/issue-pending.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/34",
+  "wait": 3200
+ },
+ {
+  "file": "staff/issue-in-progress.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/36",
+  "wait": 3200
+ },
+ {
+  "file": "staff/issue-escalated.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/15",
+  "wait": 3200
+ },
+ {
+  "file": "staff/issue-menu.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/34",
+  "wait": 3200,
+  "click": [
+   "button[aria-label=\"ตัวเลือกอื่น\"]"
+  ]
+ },
+ {
+  "file": "staff/issue-add-step.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/36",
+  "wait": 3200,
+  "click": [
+   "text=เพิ่มขั้นตอน"
+  ]
+ },
+ {
+  "file": "staff/issue-approve.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/34",
+  "wait": 3200,
+  "click": [
+   "text=อนุมัติเผยแพร่สาธารณะ"
+  ]
+ },
+ {
+  "file": "staff/issue-change-destination.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/34",
+  "wait": 3200,
+  "click": [
+   "button[aria-label=\"ตัวเลือกอื่น\"]",
+   "text=เปลี่ยนปลายทางเรื่อง"
+  ]
+ },
+ {
+  "file": "staff/issue-reject.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/34",
+  "wait": 3200,
+  "click": [
+   "button[aria-label=\"ตัวเลือกอื่น\"]",
+   "text=ปฏิเสธเรื่อง"
+  ]
+ },
+ {
+  "file": "staff/issue-accept-dialog.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/26",
+  "wait": 3200,
+  "click": [
+   "text=รับเรื่อง"
+  ]
  }
 ]
