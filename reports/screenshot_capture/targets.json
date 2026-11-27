@@ -28,7 +28,8 @@
   "anon": true,
   "path": "/",
   "scrollToText": "รายงานสถิติสถานะปัจจุบัน",
-  "scrollAdjust": -120
+  "scrollAdjust": -120,
+  "wait": 3500
  },
  {
   "file": "public/landing-resolved.webp",
@@ -76,10 +77,11 @@
     "n": 5
    },
    {
-    "text": "กระดิ่งแจ้งเตือน",
+    "sel": "[aria-label='การแจ้งเตือน']",
     "n": 6
    }
-  ]
+  ],
+  "wait": 3500
  },
  {
   "file": "user/more.webp",
@@ -258,7 +260,7 @@
   "file": "user/issue-detail.webp",
   "user": "e2estu",
   "path": "/app/issues/34",
-  "wait": 4500
+  "wait": 5000
  },
  {
   "file": "user/notifications-filter.webp",
@@ -626,7 +628,7 @@
   "path": "/app/audit-logs",
   "wait": 3500,
   "scrollToText": "โหลดเพิ่ม",
-  "scrollAdjust": -300,
+  "scrollAdjust": -320,
   "marks": [
    {
     "selText": [
@@ -678,7 +680,8 @@
     "n": 7
    }
   ],
-  "width": 760
+  "width": 1200,
+  "height": 900
  },
  {
   "file": "admin/years-list.webp",
