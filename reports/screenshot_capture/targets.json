@@ -333,20 +333,7 @@
   "file": "staff/event-management.webp",
   "user": "e2ehead",
   "path": "/app/events/manage",
-  "marks": [
-   {
-    "text": "เผยแพร่แล้ว",
-    "n": 1
-   },
-   {
-    "text": "รายชื่อผู้สมัคร",
-    "n": 2
-   },
-   {
-    "text": "สร้างกิจกรรม",
-    "n": 3
-   }
-  ]
+  "wait": 3200
  },
  {
   "file": "staff/event-create.webp",
@@ -711,7 +698,7 @@
   "path": "/app/issues/39",
   "wait": 3200,
   "click": [
-   "text=เพิ่มขั้นตอน|last"
+   "button:has-text(\"เพิ่มขั้นตอน\")|last"
   ]
  },
  {
@@ -889,5 +876,33 @@
   "wait": 3200,
   "scrollToText": "ความคิดเห็น",
   "scrollAdjust": -140
+ },
+ {
+  "file": "staff/student-role-menu.webp",
+  "user": "e2ehead",
+  "path": "/app/students",
+  "wait": 3200,
+  "click": [
+   "text=รองปฏิคม"
+  ]
+ },
+ {
+  "file": "staff/issue-close.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/39",
+  "wait": 3200,
+  "click": [
+   "button[aria-label=\"ตัวเลือกอื่น\"]",
+   "text=ปิดเรื่อง"
+  ]
+ },
+ {
+  "file": "staff/student-import-upload.webp",
+  "user": "e2ehead",
+  "path": "/app/students/import",
+  "wait": 3000,
+  "click": [
+   "text=อัปโหลดเข้า Queue"
+  ]
  }
 ]
