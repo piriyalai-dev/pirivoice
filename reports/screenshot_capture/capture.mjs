@@ -150,6 +150,11 @@ async function capture(browser, t) {
       const miss = []
       for (const m of marks) {
         let el = m.sel ? document.querySelector(m.sel) : null
+        if (!el && m.selN) {
+          // เลือกตามแท็ก + ลำดับ (เช่น select ตัวที่ 2 ของหน้า)
+          const [tag, idx] = m.selN
+          el = document.querySelectorAll(tag)[idx] || null
+        }
         if (!el && m.selText) {
           const [tag, txt] = m.selText
           // เลือก element ที่ "ลึกที่สุด" — ไม่มีลูกชายที่ข้อความตรงกัน (กันวงกลมคร่อม wrapper)

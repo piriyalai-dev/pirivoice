@@ -585,9 +585,9 @@
   "path": "/app/audit-logs",
   "marks": [
    {
-    "selText": [
-     "div",
-     "การกระทำ"
+    "selN": [
+     "select",
+     1
     ],
     "n": 1,
     "box": true,
