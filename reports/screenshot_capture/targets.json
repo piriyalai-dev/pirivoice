@@ -771,5 +771,71 @@
   "click": [
    "text=รับเรื่อง"
   ]
+ },
+ {
+  "file": "admin/dashboard-categories.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "wait": 3500,
+  "scrollToText": "หน่วยข้อยุ่งแจ้งมากที่สุด",
+  "scrollAdjust": -120
+ },
+ {
+  "file": "admin/dashboard-issue-trend.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "wait": 3500,
+  "scrollToText": "สถิติระบบ",
+  "scrollAdjust": -430
+ },
+ {
+  "file": "admin/dashboard-system.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "wait": 3500,
+  "scrollToText": "สถิติระบบ",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "admin/dashboard-traffic.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "wait": 3500,
+  "scrollToText": "การเข้าชม",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "admin/dashboard-login-chart.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "wait": 3500,
+  "scrollToText": "ผู้ใช้เข้าระบบ",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "admin/dashboard-activity-chart.webp",
+  "user": "e2eadm",
+  "path": "/app/dashboard",
+  "wait": 3500,
+  "scrollToText": "กิจกรรมล่าสุด",
+  "scrollAdjust": -140
+ },
+ {
+  "file": "admin/term-new.webp",
+  "user": "e2eadm",
+  "path": "/app/settings/terms",
+  "wait": 3200,
+  "click": [
+   "text=เพิ่มภาคเรียน"
+  ]
+ },
+ {
+  "file": "admin/user-add.webp",
+  "user": "e2eadm",
+  "path": "/app/users",
+  "wait": 3200,
+  "click": [
+   "text=เพิ่มผู้ใช้"
+  ]
  }
 ]
