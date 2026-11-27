@@ -117,7 +117,8 @@
  {
   "file": "user/notifications.webp",
   "user": "e2estu",
-  "path": "/app/notifications"
+  "path": "/app/notifications",
+  "wait": 3500
  },
  {
   "file": "user/change-password.webp",
@@ -128,12 +129,20 @@
   "file": "user/new-issue.webp",
   "user": "e2estu",
   "path": "/app/issues/new",
-  "wait": 3000
+  "wait": 3500,
+  "height": 640
  },
  {
   "file": "user/my-issues.webp",
   "user": "e2estu",
-  "path": "/app/issues/mine"
+  "path": "/app/issues/mine",
+  "wait": 3500,
+  "replace": [
+   [
+    "· ecc",
+    "แจ้งเหตุ · ร้องทุกข์"
+   ]
+  ]
  },
  {
   "file": "user/boards.webp",
@@ -240,23 +249,34 @@
   "file": "user/home-shortcuts-card.webp",
   "user": "e2estu",
   "path": "/app/home",
+  "wait": 3500,
   "marks": [
    {
-    "text": "โหวตที่ยังไม่โหวต",
-    "n": 1
+    "selText": [
+     "h2",
+     "โหวตที่ยังไม่โหวต"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 8
    },
    {
-    "text": "บอร์ด",
-    "n": 2
+    "sel": "main a[href='/app/boards']",
+    "n": 2,
+    "box": true,
+    "radius": 10
    },
    {
-    "text": "สรุปเรื่องของฉัน",
-    "n": 3
+    "selText": [
+     "h2",
+     "สรุปเรื่องของฉัน"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 8
    }
   ],
-  "scrollToText": "ทางลัด",
-  "scrollAdjust": -120,
-  "wait": 3200
+  "height": 1000
  },
  {
   "file": "user/issue-detail.webp",
@@ -268,48 +288,151 @@
   "file": "user/notifications-filter.webp",
   "user": "e2estu",
   "path": "/app/notifications",
-  "marks": [
-   {
-    "text": "เรื่องของฉัน",
-    "n": 1
-   },
-   {
-    "text": "บอร์ด",
-    "n": 2
-   },
-   {
-    "text": "กิจกรรม",
-    "n": 3
-   },
-   {
-    "text": "อ่านทั้งหมด",
-    "n": 4
-   }
-  ],
+  "wait": 3000,
   "click": [
    "[aria-label=\"กรองตามกลุ่ม และอ่านทั้งหมด\"]"
   ],
-  "wait": 3000
+  "marks": [
+   {
+    "selText": [
+     "button",
+     "เรื่องของฉัน"
+    ],
+    "within": "[role=dialog]",
+    "n": 1,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "selText": [
+     "button",
+     "บอร์ด"
+    ],
+    "within": "[role=dialog]",
+    "n": 2,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "selText": [
+     "button",
+     "กิจกรรม"
+    ],
+    "within": "[role=dialog]",
+    "n": 3,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "selText": [
+     "button",
+     "อ่านทั้งหมด"
+    ],
+    "within": "[role=dialog]",
+    "n": 4,
+    "box": true,
+    "radius": 12
+   }
+  ]
  },
  {
   "file": "user/new-issue-detail.webp",
   "user": "e2estu",
   "path": "/app/issues/new",
-  "wait": 3000,
+  "wait": 3200,
+  "height": 900,
   "click": [
    "text=แจ้งเหตุ",
+   "text=ร้องทุกข์",
    "text=ถัดไป"
+  ],
+  "type": [
+   [
+    "#issue-title",
+    "ขอให้ซ่อมไฟทางเดินอาคาร 3"
+   ],
+   [
+    "#issue-desc",
+    "หลอดไฟทางเดินชั้น 2 อาคาร 3 กระพริบและดับบ่อยในช่วงเย็น นักเรียนเดินบันไดลำบาก อยากให้ช่างมาตรวจสอบและเปลี่ยนหลอดใหม่ครับ"
+   ]
+  ],
+  "marks": [
+   {
+    "sel": "#issue-title",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "#issue-desc",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "div.rounded-card.bg-canvas",
+    "n": 3,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "main label:has(input[type='checkbox'])",
+    "n": 4,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
   "file": "user/new-issue-send.webp",
   "user": "e2estu",
   "path": "/app/issues/new",
-  "wait": 3000,
+  "wait": 3200,
+  "height": 900,
   "click": [
    "text=แจ้งเหตุ",
-   "text=ถัดไป",
+   "text=ร้องทุกข์",
    "text=ถัดไป"
+  ],
+  "type": [
+   [
+    "#issue-title",
+    "ขอให้ซ่อมไฟทางเดินอาคาร 3"
+   ],
+   [
+    "#issue-desc",
+    "หลอดไฟทางเดินชั้น 2 อาคาร 3 กระพริบและดับบ่อยในช่วงเย็น นักเรียนเดินบันไดลำบาก อยากให้ช่างมาตรวจสอบและเปลี่ยนหลอดใหม่ครับ"
+   ]
+  ],
+  "clickAfter": [
+   "text=ถัดไป",
+   "[data-testid='dest-normal']"
+  ],
+  "marks": [
+   {
+    "sel": "[data-testid='dest-normal']",
+    "n": 1,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "[data-testid='dest-vote']",
+    "n": 2,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "[data-testid='dest-talk']",
+    "n": 3,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "[data-testid='issue-submit']",
+    "n": 4,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -1282,10 +1405,26 @@
   "file": "user/my-issues-filter.webp",
   "user": "e2estu",
   "path": "/app/issues/mine",
-  "wait": 3000,
-  "click": [
-   "text=กรอง"
+  "wait": 3500,
+  "marks": [
+   {
+    "sel": "main .chip-row > a",
+    "n": 1,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "main a[href*='/issues/']:not([href*='mine']):not([href*='new'])",
+    "n": 2,
+    "box": true,
+    "radius": 12
+   }
   ],
-  "marks": []
+  "replace": [
+   [
+    "· ecc",
+    "แจ้งเหตุ · ร้องทุกข์"
+   ]
+  ]
  }
 ]
