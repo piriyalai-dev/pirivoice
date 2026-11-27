@@ -126,12 +126,7 @@
   "file": "user/new-issue.webp",
   "user": "e2estu",
   "path": "/app/issues/new",
-  "marks": [
-   {
-    "text": "ถัดไป",
-    "n": 1
-   }
-  ]
+  "wait": 3000
  },
  {
   "file": "user/my-issues.webp",
@@ -161,12 +156,14 @@
  {
   "file": "user/events.webp",
   "user": "e2estu",
-  "path": "/app/events"
+  "path": "/app/events",
+  "wait": 3000
  },
  {
   "file": "user/events-list.webp",
   "user": "e2estu",
-  "path": "/app/events"
+  "path": "/app/events",
+  "wait": 3000
  },
  {
   "file": "user/profile.webp",
@@ -293,25 +290,9 @@
   "file": "user/new-issue-detail.webp",
   "user": "e2estu",
   "path": "/app/issues/new",
-  "marks": [
-   {
-    "text": "หัวข้อ",
-    "n": 1
-   },
-   {
-    "text": "รายละเอียด",
-    "n": 2
-   },
-   {
-    "text": "แนบรูปหลักฐาน",
-    "n": 3
-   },
-   {
-    "text": "ซ่อนชื่อฉัน (ไม่ระบุตัวตน)",
-    "n": 4
-   }
-  ],
+  "wait": 3000,
   "click": [
+   "text=แจ้งเหตุ",
    "text=ถัดไป"
   ]
  },
@@ -319,25 +300,9 @@
   "file": "user/new-issue-send.webp",
   "user": "e2estu",
   "path": "/app/issues/new",
-  "marks": [
-   {
-    "text": "ดำเนินการปกติ",
-    "n": 1
-   },
-   {
-    "text": "โหวตสาธารณะ",
-    "n": 2
-   },
-   {
-    "text": "พูดคุยสาธารณะ",
-    "n": 3
-   },
-   {
-    "text": "ส่งเรื่อง",
-    "n": 4
-   }
-  ],
+  "wait": 3000,
   "click": [
+   "text=แจ้งเหตุ",
    "text=ถัดไป",
    "text=ถัดไป"
   ]
@@ -837,5 +802,11 @@
   "click": [
    "text=เพิ่มผู้ใช้"
   ]
+ },
+ {
+  "file": "user/event-detail.webp",
+  "user": "e2estu",
+  "path": "/app/events/4",
+  "wait": 3200
  }
 ]
