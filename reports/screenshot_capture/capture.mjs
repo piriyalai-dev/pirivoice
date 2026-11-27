@@ -100,7 +100,9 @@ async function capture(browser, t) {
   const doScroll = async () => {
     const found = await page.evaluate(
       ([txt, dy]) => {
-        const all = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,div,span,label,li,a'))
+        const all = Array.from(
+          document.querySelectorAll('h1,h2,h3,h4,p,div,span,label,li,a,summary,button'),
+        )
         const el =
           all.find((e) => e.textContent?.trim() === txt) ||
           all.find((e) => e.children.length === 0 && e.textContent?.includes(txt))
@@ -186,7 +188,9 @@ async function capture(browser, t) {
       for (const m of marks) {
         // `within` — จำกัดการค้นหาไว้ในกล่อง/แผ่นที่เปิดอยู่ (กันชนกับของที่ซ่อนอยู่ข้างหลัง)
         const root = (m.within && document.querySelector(m.within)) || document
-        let el = m.sel ? root.querySelector(m.sel) : null
+        // `selAll` — ล้อมทุก element ที่ตรง (กรอบเดียวคลุมพื้นที่รวม) เช่น ช่องคู่/ปุ่มชุดเดียว
+        const all = m.selAll ? Array.from(root.querySelectorAll(m.selAll)) : []
+        let el = all[0] || (m.sel ? root.querySelector(m.sel) : null)
         if (!el && m.selN) {
           // เลือกตามแท็ก + ลำดับ (เช่น select ตัวที่ 2 ของหน้า)
           const [tag, idx] = m.selN
@@ -214,10 +218,25 @@ async function capture(browser, t) {
           }
         }
         if (!el) {
-          miss.push(m.text || m.sel || JSON.stringify(m.selText))
+          miss.push(m.text || m.sel || m.selAll || JSON.stringify(m.selText))
           continue
         }
-        const r = el.getBoundingClientRect()
+        // กรอบครอบพื้นที่รวมของทุก element (selAll) — ใช้กรณีล้อม "ช่องคู่" หรือ "ปุ่มชุด"
+        const rects = (all.length ? all : [el]).map((e) => e.getBoundingClientRect())
+        const r = all.length
+          ? {
+              left: Math.min(...rects.map((x) => x.left)),
+              top: Math.min(...rects.map((x) => x.top)),
+              right: Math.max(...rects.map((x) => x.right)),
+              bottom: Math.max(...rects.map((x) => x.bottom)),
+              get width() {
+                return this.right - this.left
+              },
+              get height() {
+                return this.bottom - this.top
+              },
+            }
+          : rects[0]
         const sx = window.scrollX
         const sy = window.scrollY
         if (m.box) {
@@ -230,7 +249,16 @@ async function capture(browser, t) {
         }
         if (m.n) {
           const d = 28
-          const cx = m.at === 'left' ? r.left + sx - d / 2 : r.right + sx - d / 2
+          // `at`: left = มุมซ้าย · outside-left/outside-right = อยู่นอก element เต็มตัว
+          //       (ใช้กับข้อความล้วน เพื่อไม่ให้วงกลมทับตัวอักษร)
+          const cx =
+            m.at === 'left'
+              ? r.left + sx - d / 2
+              : m.at === 'outside-left'
+                ? r.left + sx - d
+                : m.at === 'outside-right'
+                  ? r.right + sx
+                  : r.right + sx - d / 2
           const cy = r.top + sy - d / 2
           const c = document.createElement('div')
           c.textContent = String(m.n)

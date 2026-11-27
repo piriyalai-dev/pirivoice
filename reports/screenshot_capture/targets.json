@@ -634,57 +634,38 @@
   "user": "e2eadm",
   "path": "/app/audit-logs",
   "wait": 3500,
-  "scrollToText": "โหลดเพิ่ม",
-  "scrollAdjust": -320,
   "marks": [
    {
-    "selText": [
-     "th",
-     "เวลา"
-    ],
-    "n": 1
+    "sel": "main ul li time",
+    "n": 1,
+    "box": true,
+    "radius": 6,
+    "at": "outside-right"
    },
    {
-    "selText": [
-     "th",
-     "ผู้ใช้"
-    ],
-    "n": 2
+    "sel": "main ul li p > span.break-words",
+    "n": 2,
+    "at": "outside-left"
    },
    {
-    "selText": [
-     "th",
-     "ห้อง"
-    ],
-    "n": 3
+    "sel": "main ul li p > span.rounded-full",
+    "n": 3,
+    "box": true,
+    "radius": 10,
+    "at": "outside-right"
    },
    {
-    "selText": [
-     "th",
-     "การกระทำ"
-    ],
-    "n": 4
+    "sel": "main ul li p:nth-of-type(2)",
+    "n": 4,
+    "box": true,
+    "radius": 6,
+    "at": "outside-right"
    },
    {
-    "selText": [
-     "th",
-     "ข้อมูล"
-    ],
-    "n": 5
-   },
-   {
-    "selText": [
-     "th",
-     "สถานะ"
-    ],
-    "n": 6
-   },
-   {
-    "selText": [
-     "th",
-     "ไอพี"
-    ],
-    "n": 7
+    "sel": "main ul li details summary",
+    "n": 5,
+    "box": true,
+    "radius": 6
    }
   ],
   "width": 1200,
@@ -721,39 +702,42 @@
   "file": "admin/year-new.webp",
   "user": "e2eadm",
   "path": "/app/settings/years/new",
+  "height": 950,
+  "type": [
+   [
+    "#year-be",
+    "2569"
+   ]
+  ],
   "marks": [
    {
-    "selText": [
-     "label",
-     "ปีการศึกษา (พ.ศ.)"
-    ],
-    "n": 1
+    "sel": "#year-be",
+    "n": 1,
+    "box": true,
+    "radius": 10
    },
    {
-    "selText": [
-     "label",
-     "ชื่อที่แสดง"
-    ],
-    "n": 2
+    "sel": "#year-name",
+    "n": 2,
+    "box": true,
+    "radius": 10
    },
    {
-    "selText": [
-     "label",
-     "วันเปิด"
-    ],
-    "n": 3
+    "selAll": "#year-start, #year-end",
+    "n": 3,
+    "box": true,
+    "radius": 10
    },
    {
-    "selText": [
-     "*",
-     "ใช้เป็นปีปัจจุบัน"
-    ],
-    "n": 4
+    "sel": "main label:has(input[type='checkbox'])",
+    "n": 4,
+    "box": true,
+    "radius": 12
    },
    {
     "selText": [
      "button",
-     "บันทึก"
+     "เพิ่มปีการศึกษา"
     ],
     "n": 5,
     "box": true,
@@ -800,24 +784,22 @@
   "marks": [
    {
     "selText": [
-     "*",
+     "h2",
      "ช่วงเวลาไม่ส่งแจ้งเตือน"
     ],
     "n": 1
    },
    {
-    "selText": [
-     "*",
-     "กลางคืน 22:00–06:00"
-    ],
-    "n": 2
+    "selAll": "main button.rounded-full:not([role='switch'])",
+    "n": 2,
+    "box": true,
+    "radius": 18
    },
    {
-    "selText": [
-     "*",
-     "เริ่ม"
-    ],
-    "n": 3
+    "selAll": "main label:has(input[type='time'])",
+    "n": 3,
+    "box": true,
+    "radius": 12
    },
    {
     "selText": [
@@ -826,14 +808,13 @@
     ],
     "n": 4,
     "box": true,
-    "radius": 8
+    "radius": 10
    },
    {
-    "selText": [
-     "*",
-     "เปิดใช้"
-    ],
-    "n": 5
+    "sel": "main button[role='switch'][aria-label='การพักแจ้งเตือน']",
+    "n": 5,
+    "box": true,
+    "radius": 20
    }
   ]
  },
