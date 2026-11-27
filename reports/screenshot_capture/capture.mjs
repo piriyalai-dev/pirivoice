@@ -136,9 +136,15 @@ async function capture(browser, t) {
           el = Array.from(document.querySelectorAll(tag)).find((e) => e.textContent?.includes(txt))
         }
         if (!el && m.text) {
-          el = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,span,div,button')).find(
-            (e) => e.textContent?.trim() === m.text,
-          )
+          const cands = Array.from(document.querySelectorAll('h1,h2,h3,h4,p,span,div,button'))
+          el = cands.find((e) => e.textContent?.trim() === m.text) || null
+          if (!el) {
+            // แผนสำรอง: จับแบบ "มีข้อความนี้อยู่" แล้วเลือก element ที่เล็กที่สุด
+            const near = cands
+              .filter((e) => e.textContent?.includes(m.text))
+              .sort((a, b) => a.textContent.length - b.textContent.length)
+            el = near[0] || null
+          }
         }
         if (!el) {
           miss.push(m.text || m.sel || JSON.stringify(m.selText))
