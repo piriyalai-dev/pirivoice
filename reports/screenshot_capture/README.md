@@ -26,9 +26,12 @@ node reports/screenshot_capture/capture.mjs --all --only=user/  # เฉพา�
 | `path` | เส้นทาง เช่น `/app/home` |
 | `height` | ความสูงวิวพอร์ต (หน้าฟอร์มใช้ 950–1350) |
 | `click` | selector ที่กดก่อนแคป (เช่น เลือกหมวดก่อนกด "ถัดไป") |
+| `type` | `[[selector, ข้อความ]]` กรอกช่องก่อนแคป — ทำงาน **หลัง** `click` (ฟอร์มที่เปิดด้วยคลิกจึงกรอกได้) |
+| `setFiles` | `[[selector, path]]` เลือกไฟล์ให้ `input[type=file]` (Playwright setInputFiles) |
 | `replace` | แทนข้อความบนหน้า — โดเมนทดสอบ/ชื่อจริง/อีโมจิที่ขึ้นเป็นกล่อง |
-| `scrollToText` + `scrollAdjust` | เลื่อนไปยังหัวข้อที่ต้องการ |
-| `marks` | วงกลม/กรอบสีแดง: `{text|sel|selText, n, box, radius, at}` |
+| `scrollToText` + `scrollAdjust` | เลื่อนไปยังหัวข้อที่ต้องการ — `scrollAdjust` ปรับตัวเลื่อนของ `<main>` (ไม่ใช่ window) |
+| `scrollFirst` | `true` = เลื่อน **ก่อน** กด (`click`) — ใช้เมื่อกล่อง Swal จะบังเนื้อหาที่จะโชว์ |
+| `marks` | วงกลม/กรอบสีแดง: `{text|sel|selText|selN, n, box, radius, at, within}` · `within` = selector ของกล่องที่จำกัดการค้นหา (เช่น `div.fixed.inset-0.z-50` ของ modal) |
 | `setToken` | แทนข้อความรหัสบัตรเช็คอินให้สั้นอ่านง่าย |
 
 ## ข้อควรรู้

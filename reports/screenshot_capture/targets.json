@@ -339,29 +339,33 @@
   "user": "e2ehead",
   "path": "/app/events/manage",
   "wait": 3200,
-  "scrollToText": "กิจกรรมกีฬาสี",
-  "scrollAdjust": -220,
   "marks": [
    {
     "selText": [
-     "span",
+     "button",
      "เผยแพร่แล้ว"
     ],
-    "n": 1
+    "n": 1,
+    "box": true,
+    "radius": 10
    },
    {
     "selText": [
      "button",
      "รายชื่อผู้สมัคร"
     ],
-    "n": 2
+    "n": 2,
+    "box": true,
+    "radius": 10
    },
    {
     "sel": "[aria-label^='ตัวเลือกอื่นของ']",
-    "n": 3
+    "n": 3,
+    "box": true,
+    "radius": 10
    },
    {
-    "sel": "a[href*='events/new'], button[aria-label='สร้างกิจกรรม']",
+    "sel": "a[aria-label='สร้างกิจกรรม']",
     "n": 4,
     "box": true,
     "radius": 10
@@ -865,8 +869,30 @@
   "user": "e2ehead",
   "path": "/app/issues/39",
   "wait": 3200,
-  "click": [
-   "js:เพิ่มขั้นตอน"
+  "scrollToText": "ขั้นตอนการดำเนินงาน",
+  "scrollAdjust": -80,
+  "marks": [
+   {
+    "sel": "input[placeholder='เพิ่มขั้นตอน...']",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "input[placeholder='รายละเอียด (ไม่บังคับ)']",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "button",
+     "เพิ่มขั้นตอน"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -991,14 +1017,61 @@
   "click": [
    "text=เพิ่มประกาศ"
   ],
+  "type": [
+   [
+    "#ann-message",
+    "ชวนร่วมงานเปิดบ้าน PIRIvoice วันศุกร์ที่ 28 พ.ย. นี้ เวลา 15.30 น. ณ หอประชุม"
+   ],
+   [
+    "#ann-link",
+    "https://prsc.pirivoice.com/"
+   ]
+  ],
   "marks": [
    {
-    "text": "ประกาศ",
-    "n": 1
+    "sel": "#ann-message",
+    "n": 1,
+    "box": true,
+    "radius": 14
    },
    {
-    "text": "ยกเลิก",
-    "n": 2
+    "sel": "div.custom-scrollbar > div:nth-child(2)",
+    "n": 2,
+    "box": true,
+    "radius": 14
+   },
+   {
+    "sel": "#ann-link",
+    "n": 3,
+    "box": true,
+    "radius": 14
+   },
+   {
+    "sel": "div.custom-scrollbar > div:nth-child(4)",
+    "n": 4,
+    "box": true,
+    "radius": 14
+   },
+   {
+    "selText": [
+     "button",
+     "ประกาศ"
+    ],
+    "within": "div.fixed.inset-0.z-50",
+    "n": 5,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "button",
+     "ยกเลิก"
+    ],
+    "within": "div.fixed.inset-0.z-50",
+    "n": 6,
+    "box": true,
+    "radius": 10,
+    "at": "left"
    }
   ]
  },
@@ -1141,8 +1214,34 @@
   "user": "e2ehead",
   "path": "/app/students/import",
   "wait": 3000,
-  "scrollToText": "ลากไฟล์",
-  "scrollAdjust": -160
+  "scrollToText": "ปีการศึกษาที่นำเข้า",
+  "scrollAdjust": -80,
+  "marks": [
+   {
+    "selText": [
+     "button",
+     "อัปโหลดเข้า Queue"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "#import-year",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "h2",
+     "Queue List"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
+   }
+  ]
  },
  {
   "file": "staff/event-menu.webp",
@@ -1174,10 +1273,28 @@
  {
   "file": "staff/issue-extend.webp",
   "user": "e2ehead",
-  "path": "/app/issues/39",
+  "path": "/app/issues/36",
   "wait": 3200,
+  "scrollFirst": true,
+  "scrollToText": "ขั้นตอนการดำเนินงาน",
+  "scrollAdjust": -80,
   "click": [
-   "js:ขยายเวลา"
+   "button[aria-label=\"ตัวเลือกอื่น\"]",
+   "text=ยืดเวลา"
+  ],
+  "marks": [
+   {
+    "sel": ".swal2-input",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-confirm",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
