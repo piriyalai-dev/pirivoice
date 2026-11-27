@@ -136,13 +136,7 @@
   "file": "user/my-issues.webp",
   "user": "e2estu",
   "path": "/app/issues/mine",
-  "wait": 3500,
-  "replace": [
-   [
-    "· ecc",
-    "แจ้งเหตุ · ร้องทุกข์"
-   ]
-  ]
+  "wait": 3500
  },
  {
   "file": "user/boards.webp",
@@ -1405,7 +1399,7 @@
   "file": "user/my-issues-filter.webp",
   "user": "e2estu",
   "path": "/app/issues/mine",
-  "wait": 3500,
+  "wait": 5500,
   "marks": [
    {
     "sel": "main .chip-row > a",
@@ -1419,12 +1413,6 @@
     "box": true,
     "radius": 12
    }
-  ],
-  "replace": [
-   [
-    "· ecc",
-    "แจ้งเหตุ · ร้องทุกข์"
-   ]
   ]
  }
 ]
