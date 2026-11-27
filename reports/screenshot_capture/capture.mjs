@@ -99,6 +99,19 @@ async function capture(browser, t) {
 
   for (const sel of t.click || []) {
     try {
+      if (sel.startsWith('js:')) {
+        // คลิกด้วย JS โดยหาจากข้อความ (ข้ามข้อจำกัด visibility)
+        const ok = await page.evaluate((txt) => {
+          const els = Array.from(document.querySelectorAll('button,a,[role=button]'))
+            .filter((e) => e.textContent?.trim().includes(txt))
+          if (!els.length) return false
+          els[0].click()
+          return true
+        }, sel.slice(3))
+        if (!ok) console.error(`  [${t.file}] js click not found:`, sel)
+        await page.waitForTimeout(900)
+        continue
+      }
       const [q, mode] = sel.endsWith('|last') ? [sel.slice(0, -5), 'last'] : [sel, 'first']
       const loc = page.locator(q)
       await (mode === 'last' ? loc.last() : loc.first()).click({ timeout: 5000 })
