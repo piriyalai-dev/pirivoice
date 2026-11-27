@@ -1055,16 +1055,21 @@
   "marks": [
    {
     "selText": [
-     "button,div",
+     "*",
      "ใช้กล้องไม่ได้"
     ],
-    "n": 1,
-    "box": true,
-    "radius": 8
+    "n": 1
+   },
+   {
+    "selText": [
+     "*",
+     "รหัสเช็คอิน"
+    ],
+    "n": 2
    },
    {
     "sel": "input",
-    "n": 2,
+    "n": 3,
     "box": true,
     "radius": 8
    },
@@ -1073,7 +1078,7 @@
      "button",
      "เช็คอิน"
     ],
-    "n": 3,
+    "n": 4,
     "box": true,
     "radius": 10
    }
@@ -1084,8 +1089,33 @@
   "user": "e2ehead",
   "path": "/app/boards/4",
   "wait": 3200,
-  "scrollToText": "คอมเมนต์",
-  "scrollAdjust": -140
+  "scrollToText": "ซ่อนบอร์ด",
+  "scrollAdjust": -140,
+  "marks": [
+   {
+    "selText": [
+     "*",
+     "ซ่อนบอร์ด"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "selText": [
+     "button",
+     "ซ่อน"
+    ],
+    "n": 2
+   },
+   {
+    "selText": [
+     "button",
+     "แจ้ง"
+    ],
+    "n": 3
+   }
+  ]
  },
  {
   "file": "staff/student-role-menu.webp",
