@@ -72,6 +72,10 @@ CHROME_PATH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | ta
 - ล้างข้อความทดสอบใน `notifications` (เช่น `[PR4 verify]`, `E2E e2ehead`, อีโมจิที่ขึ้นเป็นกล่อง)
 - กระทู้ 2 ใช้ "ผมอยากให้มีการทัศนศึกษา" + แก้คำผิด `ตอนนนั้น`/`รึปล่าว`
 - สร้างเรื่องทดสอบ 38 (pending) / 39 (in_progress) / 40 (escalated) — ไม่ระบุตัวตน ไม่มีรูป
+- แก้ `main_category`/`category` ของ 38/39/40 ที่ค้างเป็นค่าไม่จริง `ecc` (ทำ UI ขึ้น "· ecc"
+  เหนือหัวเรื่อง) เป็น `suggestion/academic` (38, 40) และ `report/complaint` (39) — 27 พ.ย. 2026
+  ⇒ แคป `issue-pending` · `issue-in-progress` · `issue-escalated` · `issue-add-step` ·
+  `issue-accept-dialog` · `issue-close` · `my-issues-filter` ใหม่ให้ไม่มีอักขระค้าง
 - สร้างรายงานความคิดเห็น 4 รายการ (2 open · 1 resolved · 1 dismissed)
 - สร้างกิจกรรม 4 (กีฬาสี 2569) + ผู้ลงทะเบียน (ยังอยู่บน staging — ลบได้เมื่อไม่ใช้)
 
