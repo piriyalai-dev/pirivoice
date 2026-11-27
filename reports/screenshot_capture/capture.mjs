@@ -38,7 +38,7 @@ const single = args.find((a) => !a.startsWith('--')) || null
 
 async function capture(browser, t) {
   const context = await browser.newContext({
-    viewport: { width: 390, height: t.height || 844 },
+    viewport: { width: t.width || 390, height: t.height || 844 },
     deviceScaleFactor: 2,
     userAgent: UA,
     locale: 'th-TH',

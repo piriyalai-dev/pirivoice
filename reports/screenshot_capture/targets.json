@@ -625,8 +625,8 @@
   "user": "e2eadm",
   "path": "/app/audit-logs",
   "wait": 3500,
-  "scrollToText": "เวลา",
-  "scrollAdjust": -260,
+  "scrollToText": "โหลดเพิ่ม",
+  "scrollAdjust": -300,
   "marks": [
    {
     "selText": [
@@ -677,7 +677,8 @@
     ],
     "n": 7
    }
-  ]
+  ],
+  "width": 760
  },
  {
   "file": "admin/years-list.webp",
@@ -785,7 +786,46 @@
   "path": "/app/settings",
   "wait": 3000,
   "scrollToText": "ช่วงเวลาไม่ส่งแจ้งเตือน",
-  "scrollAdjust": -120
+  "scrollAdjust": -120,
+  "marks": [
+   {
+    "selText": [
+     "*",
+     "ช่วงเวลาไม่ส่งแจ้งเตือน"
+    ],
+    "n": 1
+   },
+   {
+    "selText": [
+     "*",
+     "กลางคืน 22:00–06:00"
+    ],
+    "n": 2
+   },
+   {
+    "selText": [
+     "*",
+     "เริ่ม"
+    ],
+    "n": 3
+   },
+   {
+    "selText": [
+     "button",
+     "บันทึกช่วงเวลา"
+    ],
+    "n": 4,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "selText": [
+     "*",
+     "เปิดใช้"
+    ],
+    "n": 5
+   }
+  ]
  },
  {
   "file": "staff/issue-pending.webp",
@@ -866,8 +906,9 @@
   "user": "e2eadm",
   "path": "/app/dashboard",
   "wait": 3500,
-  "scrollToText": "หน่วยข้อยุ่งแจ้งมากที่สุด",
-  "scrollAdjust": -120
+  "scrollToText": "หมวดย่อยที่แจ้งมากที่สุด",
+  "scrollAdjust": -120,
+  "width": 760
  },
  {
   "file": "admin/dashboard-issue-trend.webp",
@@ -890,24 +931,27 @@
   "user": "e2eadm",
   "path": "/app/dashboard",
   "wait": 3500,
-  "scrollToText": "การเข้าชม",
-  "scrollAdjust": -140
+  "scrollToText": "การเข้าใช้งาน (30 วัน)",
+  "scrollAdjust": -120,
+  "width": 760
  },
  {
   "file": "admin/dashboard-login-chart.webp",
   "user": "e2eadm",
   "path": "/app/dashboard",
   "wait": 3500,
-  "scrollToText": "ผู้ใช้เข้าระบบ",
-  "scrollAdjust": -140
+  "scrollToText": "การเข้าใช้งาน (30 วัน)",
+  "scrollAdjust": -40,
+  "width": 760
  },
  {
   "file": "admin/dashboard-activity-chart.webp",
   "user": "e2eadm",
   "path": "/app/dashboard",
   "wait": 3500,
-  "scrollToText": "กิจกรรมล่าสุด",
-  "scrollAdjust": -140
+  "scrollToText": "เรื่องล่าสุด",
+  "scrollAdjust": -120,
+  "width": 760
  },
  {
   "file": "admin/term-new.webp",
