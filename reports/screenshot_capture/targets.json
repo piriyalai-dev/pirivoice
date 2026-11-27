@@ -356,7 +356,7 @@
     "n": 3
    },
    {
-    "sel": "[aria-label='สร้างกิจกรรม']",
+    "sel": "a[href*='events/new'], button[aria-label='สร้างกิจกรรม']",
     "n": 4,
     "box": true,
     "radius": 10
@@ -726,7 +726,7 @@
   "path": "/app/issues/39",
   "wait": 3200,
   "click": [
-   "button:has-text(\"เพิ่มขั้นตอน\")|last"
+   "js:เพิ่มขั้นตอน"
   ]
  },
  {
@@ -846,6 +846,16 @@
   "wait": 3000,
   "click": [
    "text=เพิ่มประกาศ"
+  ],
+  "marks": [
+   {
+    "text": "ประกาศ",
+    "n": 1
+   },
+   {
+    "text": "ยกเลิก",
+    "n": 2
+   }
   ]
  },
  {
@@ -892,17 +902,45 @@
  {
   "file": "staff/event-checkin-code.webp",
   "user": "e2ehead",
-  "path": "/app/events/4",
+  "path": "/app/events/4/check-in",
   "wait": 3200,
-  "scrollToText": "รหัสเช็คอิน",
-  "scrollAdjust": -140
+  "click": [
+   "button[aria-label=\"ตัวเลือกอื่น\"]",
+   "text=กรอกรหัสเช็คอิน"
+  ],
+  "marks": [
+   {
+    "selText": [
+     "button,div",
+     "ใช้กล้องไม่ได้"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "sel": "input",
+    "n": 2,
+    "box": true,
+    "radius": 8
+   },
+   {
+    "selText": [
+     "button",
+     "เช็คอิน"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
+   }
+  ]
  },
  {
   "file": "staff/moderation-board.webp",
   "user": "e2ehead",
   "path": "/app/boards/4",
   "wait": 3200,
-  "scrollToText": "ความคิดเห็น",
+  "scrollToText": "คอมเมนต์",
   "scrollAdjust": -140
  },
  {
@@ -929,7 +967,7 @@
   "user": "e2ehead",
   "path": "/app/students/import",
   "wait": 3000,
-  "scrollToText": "อัปโหลดไฟล์",
+  "scrollToText": "ลากไฟล์",
   "scrollAdjust": -160
  },
  {
@@ -957,6 +995,15 @@
     "text": "ยกเลิกกิจกรรม",
     "n": 4
    }
+  ]
+ },
+ {
+  "file": "staff/issue-extend.webp",
+  "user": "e2ehead",
+  "path": "/app/issues/39",
+  "wait": 3200,
+  "click": [
+   "js:ขยายเวลา"
   ]
  }
 ]
