@@ -186,7 +186,27 @@
  {
   "file": "user/boards.webp",
   "user": "e2estu",
-  "path": "/app/boards"
+  "path": "/app/boards",
+  "marks": [
+   {
+    "selAll": "main .chip-row > a",
+    "n": 1,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "main input",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "main a img",
+    "n": 3,
+    "box": true,
+    "radius": 10
+   }
+  ]
  },
  {
   "file": "user/board-comment.webp",
@@ -223,7 +243,63 @@
  {
   "file": "user/profile-edit.webp",
   "user": "e2estu",
-  "path": "/app/profile/edit"
+  "path": "/app/profile/edit",
+  "marks": [
+   {
+    "selN": [
+     "main input",
+     2
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selN": [
+     "main input",
+     3
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selN": [
+     "main input",
+     4
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selN": [
+     "main input",
+     5
+    ],
+    "n": 4,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selN": [
+     "main input",
+     6
+    ],
+    "n": 5,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selN": [
+     "main input",
+     7
+    ],
+    "n": 6,
+    "box": true,
+    "radius": 10
+   }
+  ]
  },
  {
   "file": "user/playbooks.webp",
@@ -488,11 +564,21 @@
   "marks": [
    {
     "text": "ที่รับผิดชอบ",
-    "n": 1
+    "n": 1,
+    "box": true,
+    "radius": 10
    },
    {
     "text": "รอรับ",
-    "n": 2
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "main a[href*='/issues/']:not([href*='received']):not([href*='new'])",
+    "n": 3,
+    "box": true,
+    "radius": 12
    }
   ]
  },
@@ -550,8 +636,15 @@
    {
     "text": "จำนวนที่นั่ง",
     "n": 3
+   },
+   {
+    "sel": "div.rounded-card.bg-canvas",
+    "n": 4,
+    "box": true,
+    "radius": 12
    }
-  ]
+  ],
+  "height": 1050
  },
  {
   "file": "staff/event-registrations.webp",
@@ -642,7 +735,30 @@
   "marks": [
    {
     "text": "เจ้าหน้าที่",
-    "n": 1
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "main select",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": "main input",
+    "n": 3,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "button",
+     "รองปฏิคม"
+    ],
+    "n": 4,
+    "box": true,
+    "radius": 10
    }
   ]
  },
@@ -650,7 +766,27 @@
   "file": "staff/student-import.webp",
   "user": "e2ehead",
   "path": "/app/students/import",
-  "wait": 3000
+  "wait": 3000,
+  "marks": [
+   {
+    "selText": [
+     "button",
+     "ดาวน์โหลดตัวอย่างไฟล์"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "th",
+     "คอลัมน์"
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 6
+   }
+  ]
  },
  {
   "file": "staff/student-moves.webp",
@@ -658,12 +794,37 @@
   "path": "/app/students/moves",
   "marks": [
    {
-    "text": "ย้ายทั้งห้อง",
-    "n": 1
+    "sel": "main select",
+    "n": 1,
+    "box": true,
+    "radius": 10
    },
    {
-    "text": "เลือกทั้งหมด",
-    "n": 2
+    "selN": [
+     "main select",
+     1
+    ],
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "button",
+     "ย้ายทั้งห้อง"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "button",
+     "เลือกทั้งหมด"
+    ],
+    "n": 4,
+    "box": true,
+    "radius": 10
    }
   ]
  },
@@ -1001,10 +1162,62 @@
  {
   "file": "staff/issue-menu.webp",
   "user": "e2ehead",
-  "path": "/app/issues/34",
+  "path": "/app/issues/36",
   "wait": 3200,
   "click": [
    "button[aria-label=\"ตัวเลือกอื่น\"]"
+  ],
+  "marks": [
+   {
+    "selText": [
+     "button",
+     "เปลี่ยนปลายทางเรื่อง"
+    ],
+    "within": "[role=dialog]",
+    "n": 1,
+    "box": true,
+    "radius": 12,
+    "at": "inside-right"
+   },
+   {
+    "selText": [
+     "button",
+     "ปิดเรื่อง"
+    ],
+    "within": "[role=dialog]",
+    "n": 2,
+    "box": true,
+    "radius": 12,
+    "at": "inside-right"
+   },
+   {
+    "selText": [
+     "button",
+     "ยืดเวลา"
+    ],
+    "within": "[role=dialog]",
+    "n": 3,
+    "box": true,
+    "radius": 12,
+    "at": "inside-right"
+   },
+   {
+    "selText": [
+     "button",
+     "ปฏิเสธเรื่อง"
+    ],
+    "within": "[role=dialog]",
+    "n": 4,
+    "box": true,
+    "radius": 12,
+    "at": "inside-right"
+   }
+  ],
+  "replace": [
+   [
+    "ทดสอบระบบเก็บรูปบน staging — เฟส 7 (ลบได้)",
+    "หลอดไฟในห้องเรียนอาคาร 2 ดับบ่อยช่วงบ่าย ทำให้อ่านหนังสือไม่ชัด"
+   ]
   ]
  },
  {
@@ -1055,6 +1268,20 @@
   "click": [
    "button[aria-label=\"ตัวเลือกอื่น\"]",
    "text=เปลี่ยนปลายทางเรื่อง"
+  ],
+  "marks": [
+   {
+    "sel": ".swal2-select",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-confirm",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -1065,6 +1292,20 @@
   "click": [
    "button[aria-label=\"ตัวเลือกอื่น\"]",
    "text=ปฏิเสธเรื่อง"
+  ],
+  "marks": [
+   {
+    "selAll": ".swal2-input, .swal2-textarea",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-confirm",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -1074,6 +1315,20 @@
   "wait": 3200,
   "click": [
    "text=รับเรื่อง + ตั้งเวลา"
+  ],
+  "marks": [
+   {
+    "selAll": ".swal2-input, .swal2-textarea",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-confirm",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -1340,6 +1595,26 @@
   "wait": 3200,
   "click": [
    "text=รองปฏิคม"
+  ],
+  "marks": [
+   {
+    "sel": ".swal2-select",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-confirm",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-cancel",
+    "n": 3,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -1350,6 +1625,20 @@
   "click": [
    "button[aria-label=\"ตัวเลือกอื่น\"]",
    "text=ปิดเรื่อง"
+  ],
+  "marks": [
+   {
+    "selAll": ".swal2-input, .swal2-textarea",
+    "n": 1,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "sel": ".swal2-confirm",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   }
   ]
  },
  {
@@ -1457,6 +1746,38 @@
     "n": 2,
     "box": true,
     "radius": 12
+   }
+  ]
+ },
+ {
+  "file": "user/issue-detail-actions.webp",
+  "user": "e2estu",
+  "path": "/app/issues/34",
+  "wait": 5000,
+  "marks": [
+   {
+    "selText": [
+     "*",
+     "สถานะปัจจุบัน"
+    ],
+    "n": 1,
+    "box": true,
+    "radius": 12
+   },
+   {
+    "sel": "button[aria-label='บันทึกไว้อ่านทีหลัง']",
+    "n": 2,
+    "box": true,
+    "radius": 10
+   },
+   {
+    "selText": [
+     "h2",
+     "ประวัติการดำเนินงาน"
+    ],
+    "n": 3,
+    "box": true,
+    "radius": 10
    }
   ]
  }
