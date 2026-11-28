@@ -197,12 +197,20 @@ async function capture(browser, t) {
       document.body.appendChild(layer)
       const RED = '#e11d48'
       const miss = []
+      const pos = []
       for (const m of marks) {
         // `within` — จำกัดการค้นหาไว้ในกล่อง/แผ่นที่เปิดอยู่ (กันชนกับของที่ซ่อนอยู่ข้างหลัง)
         const root = (m.within && document.querySelector(m.within)) || document
+        // ⚠️ ต้องเลือก element ที่ "มองเห็น" — หน้าแอปมีสำเนาซ่อนอยู่ (drawer/tooltip)
+        //    ที่ rect เป็น 0×0 ⇒ mark จะไปเกาะของที่มองไม่เห็นแทนของจริง
+        const vis = (e) => {
+          const q = e.getBoundingClientRect()
+          return q.width > 1 && q.height > 1
+        }
         // `selAll` — ล้อมทุก element ที่ตรง (กรอบเดียวคลุมพื้นที่รวม) เช่น ช่องคู่/ปุ่มชุดเดียว
-        const all = m.selAll ? Array.from(root.querySelectorAll(m.selAll)) : []
-        let el = all[0] || (m.sel ? root.querySelector(m.sel) : null)
+        const all = m.selAll ? Array.from(root.querySelectorAll(m.selAll)).filter(vis) : []
+        const selList = m.sel ? Array.from(root.querySelectorAll(m.sel)) : []
+        let el = all[0] || selList.find(vis) || selList[0] || null
         if (!el && m.selN) {
           // เลือกตามแท็ก + ลำดับ (เช่น select ตัวที่ 2 ของหน้า)
           const [tag, idx] = m.selN
@@ -214,7 +222,7 @@ async function capture(browser, t) {
           // (ปุ่ม/ลิงก์มักมี <span> ข้อความอยู่ข้างใน — ห้ามตัดทิ้ง ไม่งั้นหาไม่เจอ)
           const wrapperLike = tag === 'div' || tag === 'span' || tag === '*'
           const cands = Array.from(root.querySelectorAll(tag)).filter((e) => {
-            if (!e.textContent?.includes(txt)) return false
+            if (!e.textContent?.includes(txt) || !vis(e)) return false
             if (!wrapperLike) return true
             return !Array.from(e.children).some((c) => c.textContent?.includes(txt))
           })
@@ -222,7 +230,9 @@ async function capture(browser, t) {
           el = cands[0] || null
         }
         if (!el && m.text) {
-          const cands = Array.from(root.querySelectorAll('h1,h2,h3,h4,p,span,div,button'))
+          const cands = Array.from(root.querySelectorAll('h1,h2,h3,h4,p,span,div,button')).filter(
+            vis,
+          )
           el = cands.find((e) => e.textContent?.trim() === m.text) || null
           if (!el) {
             // แผนสำรอง: จับแบบ "มีข้อความนี้อยู่" แล้วเลือก element ที่เล็กที่สุด
@@ -254,6 +264,11 @@ async function capture(browser, t) {
           : rects[0]
         const sx = window.scrollX
         const sy = window.scrollY
+        pos.push({
+          n: m.n,
+          text: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24),
+          rect: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)],
+        })
         if (m.box) {
           const box = document.createElement('div')
           box.style.cssText =
@@ -273,7 +288,11 @@ async function capture(browser, t) {
                 ? r.left + sx - d
                 : m.at === 'outside-right'
                   ? r.right + sx
-                  : r.right + sx - d / 2
+                  : m.at === 'inside-right'
+                    ? r.right + sx - d
+                    : m.at === 'inside-left'
+                      ? r.left + sx
+                      : r.right + sx - d / 2
           const cy = r.top + sy - d / 2
           const c = document.createElement('div')
           c.textContent = String(m.n)
@@ -284,10 +303,11 @@ async function capture(browser, t) {
           layer.appendChild(c)
         }
       }
-      return miss
+      return { miss, pos }
     }, t.marks)
-    missing_marks = missing
-    if (missing.length) console.error(`  [${t.file}] mark ไม่พบ: ${missing.join(' · ')}`)
+    missing_marks = missing.miss
+    if (process.env.DEBUG_MARKS) console.log('  marks:', JSON.stringify(missing.pos))
+    if (missing_marks.length) console.error(`  [${t.file}] mark ไม่พบ: ${missing_marks.join(' · ')}`)
   }
 
   const status = { file: t.file, missing: missing_marks, scroll: scroll_found, ok: missing_marks.length === 0 && scroll_found }

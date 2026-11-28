@@ -13,7 +13,7 @@
 | สารบัญ / ภาพ / ตาราง | 313 / 98 / 66 รายการ (อัปเดตอัตโนมัติ) |
 | กล่องหมายเหตุ | ย่อหน้าพื้นขาว + ตัวหนา (ไม่มีแถบสี) |
 | ข้อความใน `` `...` `` | แสดงเป็น **ตัวหนา** (ไม่ใช้ monospace) |
-| รูปแคปที่แคปใหม่ | **84 / 86** |
+| วงกลมครบตามบท | **ตรวจภาพจริงแล้ว: 43 / 64 ภาพที่มีรายการหมายเลข** (28 พ.ย. 2026) |
 | ไฟล์ส่งมอบ | `reports/คู่มือการใช้งานระบบ_PIRIvoice.odt` + `.pdf` · สำเนาใน `~/reports/` |
 
 ## 2. เครื่องมือแคป (ใช้ต่อ)
@@ -35,32 +35,28 @@ CHROME_PATH=$(ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | ta
 `marks`: `{text|sel|selText|selN|selAll, n, box, radius, at, within}`
 (`at`: `left` · `outside-left` · `outside-right` — ใช้กับข้อความล้วนไม่ให้วงทับตัวอักษร)
 
-## 3. เหลือ 2 รูป — แคปจากมือถือจริงเท่านั้น
+## 3. สถานะจริงหลังตรวจภาพทุกใบ (28 พ.ย. 2026)
 
-> ✅ **staff (5) เสร็จแล้ว 27 พ.ย. 2026** — `issue-add-step` · `issue-extend` · `event-management`
-> · `announcement-new` · `student-import-upload` แคปใหม่ตามเลขในบท 12.3 / 12.7 / 11.2+13.1 / 14.2 / 17.2
-> (เครื่องแคปเพิ่ม `type` · `setFiles` · `within` · `scrollFirst` แล้ว — ดู README)
->
-> ✅ **admin (3) เสร็จแล้ว 27 พ.ย. 2026** — `audit-table` (UI เป็น **การ์ด** ไม่ใช่ตาราง ⇒ ปรับบท 23
-> ทั้งบทให้ตรง: 5 จุด = เวลา/ผู้ใช้/ป้ายการกระทำ/ข้อมูลอ้างอิง/รายละเอียด) · `quiet-hours-settings`
-> (วง 5 จุด รวมสวิตช์ `button[role=switch]`) · `year-new` (ปุ่มจริงคือ **“เพิ่มปีการศึกษา”** ⇒ แก้บท 25.3 ด้วย)
->
-> ✅ **user — หน้าเว็บเสร็จแล้ว 27 พ.ย. 2026**
-> · แคปใหม่ 6 รูป: `notifications-filter` (วงใน `[role=dialog]`) · `my-issues-filter` (วงชิป "ทั้งหมด" +
-> การ์ด) · `home-shortcuts-card` (height 1000 ให้การ์ดสรุปพ้น FAB)
-> · `new-issue` · `new-issue-detail` (คลิกการ์ดหมวด div → หมวดย่อย → ถัดไป + กรอกตัวอย่าง) ·
-> `new-issue-send` (ใช้ `clickAfter` กด "ถัดไป" หลังกรอก)
-> · `notifications` และ `my-issues` ตรวจแล้ว **ไม่ต้องมีวง** (บทไม่มีรายการหมายเลข) — คงไฟล์เดิม
->
-> ✅ **public (2) เสร็จแล้ว 27 พ.ย. 2026** — `landing-hero` (วง 4 จุด; ปุ่ม "เข้าสู่ระบบ" มี 2 ตัว
-> ในหน้า ⇒ ต้องจำกัด `within: "header"` ไม่งั้นวงไปเกาะลิงก์ท้ายหน้า) · `login` (วง 1–4:
-> ช่องรหัสนักเรียน · ช่องรหัสผ่าน · ปุ่มเข้าสู่ระบบ · กล่องรหัสผ่านเริ่มต้น)
+> ⚠️ ตัวเลข "84/86" เดิมนับเฉพาะรูปที่ยังไม่เคยแคป **ไม่ได้ตรวจว่าวงครบตามบท**
+> ตรวจใหม่ด้วยสคริปต์นับวงกลมแดงในภาพ (`/tmp` — ดูวิธีใน log) เทียบกับรายการในแต่ละบท
+> ⇒ จาก 64 ภาพที่มีรายการหมายเลข มี **21 ภาพ** ที่วงไม่ครบ/ไม่มีวง
 
-### ยังเหลือ — 2 รูป OS (ไม่ใช่หน้าเว็บ)
-| รูป | ต้องทำอะไร |
-|---|---|
-| `install-android` | แคปจากมือถือ Android จริง (หน้าติดตั้ง PWA / เมนู Chrome) |
-| `ios-install` | แคปจาก iPhone จริง (Safari → เพิ่มไปยังหน้าจอโฮม) |
+**แก้แล้วรอบนี้ (16 รูป · ตรวจด้วย DEBUG_MARKS + contact sheet):**
+`received-issues` · `issue-accept-dialog` · `issue-close` · `issue-reject` · `issue-change-destination`
+· `issue-menu` (ย้ายไปเรื่อง 36 เพราะเรื่อง 39 ไม่มีนับถอยหลัง ⇒ เมนูไม่มี "ยืดเวลา") ·
+`event-create` · `event-registrations` · `student-records` · `student-role-menu` · `student-moves`
+· `student-import` · `student-promote` · `user/more` · `user/profile-edit` · `user/issue-detail-actions`
+
+**เหลือ 21 ภาพ:**
+
+| กลุ่ม | รูป | ต้องทำ |
+|---|---|---|
+| user บอร์ด | `boards` · `board-vote` · `board-comment` · `new-suggestion` | เพิ่ม mark/ทำ target ใหม่ (board-vote กับ new-suggestion ยังไม่มี target) |
+| user กิจกรรม | `events-list` · `event-detail` | ภาพปกเป็น `background-image` ไม่ใช่ `<img>` — ต้องหา selector |
+| staff เรื่อง (ต้องแก้ข้อมูล staging) | `issue-in-progress` · `issue-escalated` · `issue-pending` · `issue-approve` | 39 ต้องมี countdown+steps · 40 ต้องมี countdown overdue · 38 ต้อง `requested_destination='talk'` (บท 12.4/12.6/12.11/12.12) |
+| staff/บอร์ด | `moderation-queue` | บทมีข้อ 4 "สถานะว่าง" แต่หน้ามีรายการ — ต้องปรับบทหรือใช้ภาพสถานะว่าง |
+| admin แดชบอร์ด | `dashboard-overview` (ขาดข้อ 5) · `dashboard-categories` · `dashboard-issue-trend` · `dashboard-system` · `dashboard-traffic` · `dashboard-login-chart` · `dashboard-activity-chart` | 6 รูปยังไม่มี mark เลย |
+| admin อื่น | `user-add` · `users-list` · `term-new` · `terms-list` | users-list บทอ้าง "แท็บเจ้าหน้าที่" ซึ่ง UI เปลี่ยนเป็นชิปบทบาท — ต้องปรับบท |
 
 ## 4. ข้อมูล staging ที่แก้ไว้แล้ว (ตามที่เจ้าของเครื่องอนุญาต)
 
